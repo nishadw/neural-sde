@@ -1,0 +1,32 @@
+[
+  {
+    "noise_channels": 256,
+    "params": 12704,
+    "adjoint_temp_mb": 62.003822326660156,
+    "backprop_temp_mb": 0.7620849609375
+  },
+  {
+    "noise_channels": 512,
+    "params": 12704,
+    "adjoint_temp_mb": 154.45108795166016,
+    "backprop_temp_mb": 1.529296875
+  },
+  {
+    "noise_channels": 1024,
+    "params": 12704,
+    "adjoint_temp_mb": 437.83951568603516,
+    "backprop_temp_mb": 2.99774169921875
+  },
+  {
+    "noise_channels": 512,
+    "params": 4320,
+    "adjoint_temp_mb": 95.30533599853516,
+    "backprop_temp_mb": 1.39569091796875
+  },
+  {
+    "noise_channels": 512,
+    "params": 41760,
+    "adjoint_temp_mb": 389.24503326416016,
+    "backprop_temp_mb": 1.8087158203125
+  }
+]
