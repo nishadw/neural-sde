@@ -1,6 +1,6 @@
 # Neural SDEs in JAX
 
-[![tests](https://github.com/nishadw/neural-sdes-jax/actions/workflows/tests.yml/badge.svg)](https://github.com/nishadw/neural-sdes-jax/actions/workflows/tests.yml)
+[![tests](https://github.com/nishadw/neural-sde/actions/workflows/tests.yml/badge.svg)](https://github.com/nishadw/neural-sde/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.10%2B-1F2328)
 ![jax](https://img.shields.io/badge/JAX-Diffrax%20%7C%20Equinox-C8102E)
 [![license](https://img.shields.io/badge/license-MIT-6B7280)](LICENSE)
@@ -11,6 +11,12 @@
 2. benchmarks the **three ways to get that gradient** (backprop through the solver, recursive checkpointing, and the stochastic adjoint) on memory, speed, and accuracy.
 
 It is the code companion to a lecture I gave in UMD's graduate course *Differentiable Programming* (CMSC 838B, Fall 2026). Slides, speaker notes, and the reading list are in [`lecture/`](lecture/).
+
+## Demo (no code to run)
+
+![Demo: adjoint vs. backprop, the test suite, a live calibration, and the gradient-method trade-offs](assets/demo.gif)
+
+52 seconds, silent. Full-resolution video: [`assets/demo.mp4`](assets/demo.mp4). Every frame is rendered from a real run: the lecture demo script, `pytest`, a full 500-iteration calibration re-run that records the fitted smile every 5 steps, and the saved benchmark sweep. To rebuild it, run `experiments/demo_video/make.sh`.
 
 ![Neural local-vol calibration](assets/local_vol_calibration.png)
 
@@ -101,7 +107,7 @@ Parameters must go through `args` (here `p`), not a closure: `BacksolveAdjoint` 
 ## Install and test
 
 ```bash
-git clone https://github.com/nishadw/neural-sdes-jax && cd neural-sdes-jax
+git clone https://github.com/nishadw/neural-sde && cd neural-sde
 pip install -e ".[dev]"
 pytest                                               # 8 tests, ~1 min
 ```
@@ -124,9 +130,10 @@ experiments/
   local_vol_calibration.py    neural local-vol vs. Heston smile
   adjoint_tradeoffs.py        memory / time / error sweep over solver steps
   adjoint_memory_scaling.py   what the adjoint's memory grows with
+  demo_video/                 renders assets/demo.mp4 and demo.gif from real runs
 tests/             pytest suite (runs in CI)
 results/           JSON outputs of the experiments
-assets/            figures
+assets/            figures, demo video
 lecture/           slides (.pptx, .pdf), reading guide (.docx), demo, build scripts
 ```
 
