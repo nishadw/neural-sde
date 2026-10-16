@@ -139,14 +139,22 @@ lecture/           slides (.pptx, .pdf), reading guide (.docx), demo, build scri
 
 ## The lecture
 
-*Backprop Through Continuous Time: Neural ODEs, Neural SDEs, and the Diffusion Models Built on Them*: a 25-minute student lecture covering:
-- ResNets as Euler steps,
-- the adjoint method as continuous-time backprop,
-- the stochastic adjoint and its two catches (replaying the Brownian path; Itô vs. Stratonovich),
-- training objectives (latent SDEs, SDE-GANs, calibration),
-- diffusion models as neural SDEs,
-- applications, from GenCast to Diffusion Policy to option-pricing models,
-- and where it breaks.
+*Backprop Through Continuous Time: Neural SDEs: Modeling, Gradients, and Training*. A graduate student lecture with one running example throughout: predicting when an avocado goes bad from irregular daily photos (the public 'Hass' Avocado Ripening Photographic Dataset). It covers:
+
+- **Continuous time:** neural ODEs, and three ways to differentiate a solver (backprop, checkpointing, adjoint).
+- **Stochastic calculus:** the Itô toolkit, Itô vs. Stratonovich, and a neural SDE for ripening with an Arrhenius temperature prior.
+- **Gradients through randomness:**
+  - pathwise vs. score-function estimators;
+  - why the gradient of a first-passage probability is zero pathwise;
+  - the stochastic adjoint;
+  - the benchmark in this repo.
+- **Training and limits:**
+  - the latent-SDE ELBO via Girsanov;
+  - diffusion models as neural SDEs;
+  - applications and open problems.
+- **Backup slides:** derivations, a solver table, and Brownian bridges.
+
+Results for the avocado example are placeholders until that experiment is built.
 
 - [Slides (PDF)](lecture/neural_sde_lecture.pdf) · [PowerPoint with speaker notes](lecture/neural_sde_lecture.pptx)
 - [Reading and prep guide](lecture/neural_sde_reading_guide.docx)
