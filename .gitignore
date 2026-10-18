@@ -3,6 +3,7 @@ __pycache__/
 *.egg-info/
 .eggs/
 build/
+!lecture/build/
 dist/
 .venv/
 venv/
@@ -11,5 +12,4 @@ venv/
 .DS_Store
 node_modules/
 lecture/build/*.pdf
-lecture/build/*.jpg
 experiments/demo_video/_cache/

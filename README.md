@@ -139,10 +139,15 @@ lecture/           slides (.pptx, .pdf), reading guide (.docx), demo, build scri
 
 ## The lecture
 
-*Backprop Through Continuous Time: Neural SDEs: Modeling, Gradients, and Training*. A graduate student lecture with one running example throughout: predicting when an avocado goes bad from irregular daily photos (the public 'Hass' Avocado Ripening Photographic Dataset). It covers:
+*Backprop Through Continuous Time: Neural SDEs: Modeling, Gradients, and Training*. A graduate student lecture (22 slides plus a 9-slide appendix) built around one running example: predicting avocado shelf life from daily photos, using the data, figures and baselines of Xavier, Rodrigues & Silva, [*Foods* 13:1150 (2024)](https://doi.org/10.3390/foods13081150). It covers:
 
+- **The running example:** the paper's classify-then-regress pipeline, read as a constant-drift ODE, and why its errors call for a distribution over shelf life.
 - **Continuous time:** neural ODEs, and three ways to differentiate a solver (backprop, checkpointing, adjoint).
-- **Stochastic calculus:** the Itô toolkit, Itô vs. Stratonovich, and a neural SDE for ripening with an Arrhenius temperature prior.
+- **Stochastic dynamics:**
+  - the Itô toolkit and Itô vs. Stratonovich;
+  - a latent neural SDE for ripening with an ordinal observation head;
+  - an Arrhenius drift prior fitted to the paper's rates (Eₐ ≈ 50 kJ/mol);
+  - a first-passage check of the paper's error ratios.
 - **Gradients through randomness:**
   - pathwise vs. score-function estimators;
   - why the gradient of a first-passage probability is zero pathwise;
@@ -151,10 +156,11 @@ lecture/           slides (.pptx, .pdf), reading guide (.docx), demo, build scri
 - **Training and limits:**
   - the latent-SDE ELBO via Girsanov;
   - diffusion models as neural SDEs;
+  - a proposed evaluation against the paper's baseline;
   - applications and open problems.
-- **Backup slides:** derivations, a solver table, and Brownian bridges.
+- **Appendix (not presented):** derivations (ODE adjoint, Girsanov KL, inverse-Gaussian first passage, Arrhenius fit), a solver table, Brownian bridges, and the benchmark setup.
 
-Results for the avocado example are placeholders until that experiment is built.
+The latent-SDE results on the avocado data are in progress; the baseline column comes from the paper.
 
 - [Slides (PDF)](lecture/neural_sde_lecture.pdf) · [PowerPoint with speaker notes](lecture/neural_sde_lecture.pptx)
 - [Reading and prep guide](lecture/neural_sde_reading_guide.docx)
