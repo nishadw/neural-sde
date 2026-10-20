@@ -1,0 +1,16 @@
+item_id,avocado,origin,purchase_date,mass_g,length_mm,diameter_mm,cut_day,tracked_to_end,n_scan_visits
+avo01,1,Mexico,2023-06-22,226.0,100.78,69.01,,True,7
+avo02,2,Mexico,2023-06-22,234.0,111.11,68.47,,True,7
+avo03,3,Mexico,2023-06-22,255.0,103.57,71.61,,True,7
+avo04,4,Mexico,2023-06-22,238.0,89.42,72.15,1.0,False,1
+avo05,5,Mexico,2023-06-22,257.0,107.43,70.43,3.0,False,1
+avo06,6,Mexico,2023-06-22,229.0,89.4,71.23,5.0,False,1
+avo07,7,Mexico,2023-06-22,216.0,101.4,66.27,7.0,False,1
+avo08,8,Mexico,2023-06-22,205.0,99.01,66.97,9.0,False,1
+avo09,9,Mexico,2023-06-22,213.0,81.59,71.09,11.0,False,1
+avo10,10,Mexico,2023-06-22,247.0,88.33,74.85,13.0,False,1
+avo11,11,Mexico,2023-06-22,207.0,93.21,68.25,,True,7
+avo12,12,Mexico,2023-06-22,227.0,102.45,68.97,,False,0
+avo13,13,Mexico,2023-06-22,242.0,92.54,73.14,,False,0
+avo14,14,Mexico,2023-06-22,236.0,95.95,71.09,,False,0
+avo15,15,Mexico,2023-06-22,206.0,94.91,67.29,,False,0

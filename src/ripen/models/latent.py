@@ -47,6 +47,8 @@ class LatentDynamics(eqx.Module):
     readout_b: Array
     head: OrdinalHead
     clock: eqx.Module
+    feature_dec: eqx.nn.MLP | None
+    log_obs_scale: Array | None
     # static configuration
     kind: str = eqx.field(static=True)  # "sde" | "ode"
     latent_dim: int = eqx.field(static=True)
@@ -66,6 +68,8 @@ class LatentDynamics(eqx.Module):
     spoil_weight: float = eqx.field(static=True)
     sigma_prior: float | None = eqx.field(static=True)
     sigma_prior_weight: float = eqx.field(static=True)
+    decode_features: bool = eqx.field(static=True)
+    feat_dim: int = eqx.field(static=True)
 
     def __init__(
         self,
@@ -101,6 +105,7 @@ class LatentDynamics(eqx.Module):
         sigma_prior: float | None = None,
         sigma_prior_weight: float = 0.0,
         init_sigma: float = 0.3,
+        decode_features: bool = False,
     ):
         if kind not in ("sde", "ode"):
             raise ValueError(kind)
@@ -133,6 +138,12 @@ class LatentDynamics(eqx.Module):
         self.readout_b = jnp.zeros((), jnp.float32)
         self.head = OrdinalHead(fixed=fixed_thresholds)
         self.clock = make_clock(clock, n_groups, **(clock_kwargs or {}))
+        self.decode_features, self.feat_dim = decode_features, feat_dim
+        if decode_features:
+            self.feature_dec = eqx.nn.MLP(latent_dim, feat_dim, hidden, 1, activation=jax.nn.gelu, key=ks[6])
+            self.log_obs_scale = jnp.zeros((), jnp.float32)
+        else:
+            self.feature_dec, self.log_obs_scale = None, None
 
     # ----- pieces -----------------------------------------------------------------------------------------------
     @property
@@ -237,6 +248,16 @@ class LatentDynamics(eqx.Module):
         lp_stage = self.head.log_prob(r_at, jnp.broadcast_to(batch.stage[None], (M, B, V)))
         w = (batch.visible & (batch.stage > 0))[None]
         obs_ll = jnp.mean(jnp.sum(jnp.where(w, lp_stage, 0.0), axis=2), axis=0)  # [B]
+        if self.decode_features:
+            # Gaussian likelihood of the visit features given the latent: the generative (VAE) part of the latent SDE,
+            # which lets unlabeled sequences train the dynamics
+            z_at = jnp.take_along_axis(z_path, idx[..., None], axis=2)  # [M, B, V, D]
+            mu_f = jax.vmap(jax.vmap(jax.vmap(self.feature_dec)))(z_at)
+            s2 = jnp.exp(2.0 * self.log_obs_scale)
+            lp_f = -0.5 * jnp.sum((batch.feat[None] - mu_f) ** 2, axis=-1) / s2 - 0.5 * self.feat_dim * (
+                2.0 * self.log_obs_scale + jnp.log(2.0 * jnp.pi)
+            )
+            obs_ll = obs_ll + jnp.mean(jnp.sum(jnp.where(batch.visible[None], lp_f, 0.0), axis=2), axis=0)
         # spoilage interval likelihood: smoothed crossing indicator, averaged over paths
         rm = jax.vmap(jax.vmap(lambda r: running_max_from(r, 0)))(r_path)
         crossed = jnp.mean(crossing_prob(rm, self.head.boundary, self.fpt_beta), axis=0)  # [B, T]

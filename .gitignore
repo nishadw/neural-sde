@@ -18,6 +18,7 @@ experiments/demo_video/_cache/
 # data and run outputs: raw data never enters git; split files and summaries do
 /data/*
 !/data/README.md
+!/data/manifests/
 results/runs/
 results/logs/
 results/synthetic/run/
