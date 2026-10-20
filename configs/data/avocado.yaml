@@ -1,0 +1,9 @@
+# 'Hass' Avocado Ripening Photographic Dataset, Mendeley doi:10.17632/3xd9n945v8.1 (CC BY 4.0).
+# Download and unzip under `root`; run `make features` once to cache backbone features.
+name: avocado
+root: data/avocado
+labels_file: null                                  # default: first *.xlsx under root
+images_dir: null                                   # default: root
+features_file: data/features/avocado_resnet18.npz  # from scripts/extract_features.py; null = no image features
+subsample_every: 1                                 # 2 or 3 simulates sparser visits (direction 3)
+subsample_offset: 0

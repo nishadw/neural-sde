@@ -1,0 +1,7 @@
+# Stevens Institute produce dataset: not yet available. Fill in once it arrives; see src/ripen/data/stevens.py
+# for the manifest schema. Until then `scripts/export_manifest.py` can write the avocado set in this format.
+name: stevens
+manifest: data/stevens/manifest.csv
+features_file: data/features/stevens_resnet18.npz
+subsample_every: 1
+subsample_offset: 0

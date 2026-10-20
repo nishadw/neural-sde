@@ -1,0 +1,17 @@
+# Fake fruit from a known SDE (src/ripen/data/synthetic.py). Rates are those implied by Xavier et al. (2024), Table 4.
+name: synthetic
+n_items: 300
+rates: {T10: 0.228, T20: 0.473, Tamb: 0.518}
+temps: {T10: 10.0, T20: 20.0, Tamb: 18.7}
+sigma: 0.25
+z0_mean: 1.2
+z0_sd: 0.15
+visit_interval: 1
+p_missing: 0.0
+t_max: 40.0
+feat_dim: 8
+feat_noise: 0.3
+label_noise: 0.0
+seed: 0
+subsample_every: 1        # >1 keeps every k-th visit after simulation (direction 3)
+subsample_offset: 0
