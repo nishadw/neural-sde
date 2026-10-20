@@ -1,180 +1,193 @@
-# Neural SDEs in JAX
+# ripen
 
-[![tests](https://github.com/nishadw/neural-sde/actions/workflows/tests.yml/badge.svg)](https://github.com/nishadw/neural-sde/actions/workflows/tests.yml)
+[![tests](https://github.com/nishadw/ripen/actions/workflows/tests.yml/badge.svg)](https://github.com/nishadw/ripen/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.10%2B-1F2328)
 ![jax](https://img.shields.io/badge/JAX-Diffrax%20%7C%20Equinox-C8102E)
 [![license](https://img.shields.io/badge/license-MIT-6B7280)](LICENSE)
 
-**Backpropagating through stochastic differential equation solvers.** This repo:
+**From photos of a piece of produce, predict a distribution over when it spoils — not a single days-left number.**
 
-1. calibrates a **neural local-volatility model** to a Heston implied-volatility smile by differentiating a Monte Carlo pricer end to end, and
-2. benchmarks the **three ways to get that gradient** (backprop through the solver, recursive checkpointing, and the stochastic adjoint) on memory, speed, and accuracy.
+A fruit photographed daily is a time series with a hidden state. Spoilage is a first-passage event of that
+state, observed only between visits (interval-censored) or not at all before the study ends (right-censored).
+`ripen` models the hidden ripening state with a **latent neural SDE** whose clock runs at an **Arrhenius rate
+set by storage temperature**, reads out a ripeness stage through an ordinal head, and reports
+`P(spoiled by day t)` from Monte Carlo first-passage times. Seven other model families — the published
+classify-then-regress baseline, a direct regressor, discrete-time survival heads, GRU / GRU-D / ODE-RNN
+encoders, and a latent ODE — share one interface, one trainer and one evaluation suite so the comparison is fair.
 
-It is the code companion to a lecture I gave in UMD's graduate course *Differentiable Programming* (CMSC 838B, Fall 2026). Slides, speaker notes, and the reading list are in [`lecture/`](lecture/).
+Course project for UMD CMSC 838B *Differentiable Programming* (Fall 2026). Built on the SDE solver, gradient
+benchmark and calibration code from the earlier `neural-sde` repo, which now lives in [`src/nsde`](src/nsde)
+(see [Foundations](#foundations)).
 
-## Demo (no code to run)
+```mermaid
+flowchart LR
+  P["photos<br/>day 0, 1, 2, …"] --> E["frozen CNN<br/>features"]
+  E --> Q["posterior encoder<br/>(GRU / GRU-D / ODE-RNN)"]
+  T["storage T"] --> K["κ(T) = Arrhenius clock"]
+  Q --> Z0["q(z₀)"]
+  Z0 --> SDE["latent SDE<br/>dZ = κ(T)·μθ(Z) dt + σθ(Z) dW"]
+  K --> SDE
+  SDE --> H["ordinal head<br/>stage 1 … 5"]
+  SDE --> FPT["first passage of<br/>ripeness into stage 5"]
+  FPT --> OUT["P(spoiled by day t)"]
+  H -. stage labels .-> L["ELBO + interval-censored<br/>spoilage likelihood"]
+  FPT -. (lo, hi] .-> L
+```
 
-![Demo: adjoint vs. backprop, the test suite, a live calibration, and the gradient-method trade-offs](assets/demo.gif)
+## Why a distribution
 
-52 seconds, silent. Full-resolution video: [`assets/demo.mp4`](assets/demo.mp4). Every frame is rendered from a real run: the lecture demo script, `pytest`, a full 500-iteration calibration re-run that records the fitted smile every 5 steps, and the saved benchmark sweep. To rebuild it, run `experiments/demo_video/make.sh`.
+The published model on this data (Xavier, Rodrigues & Silva, *Foods* 2024) classifies a photo into one of five
+ripeness stages and applies a per-temperature linear rule, `days left = α_g (stage − 5)`; it is off by about a
+day on average and says nothing about how sure it is. Two fruit that look the same today can spoil days apart.
+A retailer acting on "good through Thursday, 1-in-5 chance it is bad by Tuesday" can price, move or discard
+by risk. The follow-up that added storage temperature (Hangud & Hangud 2026) improved the point estimate but
+threw away the 16 % of fruit that never spoiled inside the study. A survival likelihood keeps them.
 
-![Neural local-vol calibration](assets/local_vol_calibration.png)
+## Results
 
-## Results at a glance
+All cells are **TBD** until the corresponding run exists (no GPU runs yet; see
+[`docs/experiment_plan.md`](docs/experiment_plan.md)). Test split, every unspoiled prefix of every test fruit;
+MAE in days on uncensored instances; CRPS equals MAE for point predictions, so all rows are comparable.
 
-| | Result |
-|---|---|
-| Neural local-vol fit to a Heston smile (3 maturities, 80–120% strikes) | **0.31 vol pts** RMSE on quoted strikes, **0.26** on held-out strikes |
-| Same quotes, best flat Black-Scholes vol | 4.21 / 3.87 vol pts |
-| Gradient memory at 512 solver steps | backprop **10.3 MB**, checkpointing **1.01 MB**, adjoint **154 MB** |
-| Time per gradient at 512 steps | backprop 2.1 s, checkpointing 3.0 s, adjoint 137 s |
-| Adjoint gradient error vs. backprop | 7.4e-05 at 16 steps → 1.8e-06 at 512 steps |
+| Model | Inputs | Censoring | MAE ↓ | CRPS ↓ | 80 % cov. | 80 % width | C-index ↑ | ECE ↓ |
+|---|---|---|---|---|---|---|---|---|
+| Xavier et al. 2024 (paper, by sample) | 1 photo + group | dropped | 1.04 | 1.04 | — | 0 | — | — |
+| Hangud & Hangud 2026 (paper, fruit-weighted) | 1 photo + group | dropped | 1.126 | 1.126 | — | 0 | — | — |
+| `stage_linear` (reimplementation) | 1 photo + group | dropped | TBD | TBD | — | 0 | TBD | — |
+| `direct_reg` | 1 photo + T | dropped | TBD | TBD | — | 0 | TBD | — |
+| `discrete_surv` | 1 photo + T | interval | TBD | TBD | TBD | TBD | TBD | TBD |
+| `gru_gap` | photos so far + T | interval | TBD | TBD | TBD | TBD | TBD | TBD |
+| `gru_d` | photos so far + T | interval | TBD | TBD | TBD | TBD | TBD | TBD |
+| `ode_rnn` | photos so far + T | interval | TBD | TBD | TBD | TBD | TBD | TBD |
+| `latent_ode` | photos so far + T | first passage | TBD | TBD | TBD | TBD | TBD | TBD |
+| **`latent_sde`** | photos so far + κ(T) | first passage | TBD | TBD | TBD | TBD | TBD | TBD |
 
-## 1. Calibrating a neural local-volatility SDE
+Per-storage-group tables, the photos-vs-uncertainty curve, the every-2/3-days ablation and the
+leave-one-group-out transfer land in [`results/summary.md`](results/summary.md) via `make summary`.
 
-**Setup.** "Market" quotes are European calls priced under Heston (κ = 1.5, θ = v₀ = 0.04, ξ = 0.6, ρ = −0.7) with a semi-analytic Fourier pricer, at maturities 0.25, 0.5 and 1 year and strikes from 80% to 120% of spot. The model is
+**What does run today (CPU, in CI):** the fake-fruit test. A label-only latent SDE with a linear drift,
+constant diffusion and a per-group clock is fit to ripening simulated from a known SDE at the paper's rates
+(0.228 / 0.473 / 0.518 stages per day) and must recover each rate within 25 %, the noise level within 50 %, and
+the inverse-Gaussian spoilage CDF within 0.15 — it does, in under a minute ([`tests/test_recovery.py`](tests/test_recovery.py)).
 
-$$ d\log S_t = \left(r - \tfrac12 \sigma_\theta(t, \log S_t)^2\right)dt + \sigma_\theta(t, \log S_t)\, dW_t $$
+## The model
 
-with $\sigma_\theta$ a 3-layer MLP. Prices are Monte Carlo averages over 8,192 Euler–Maruyama paths per step. The loss is vega-weighted squared price error, which approximates squared implied-vol error. Gradients flow **through the SDE solver and the Monte Carlo average** (pathwise derivatives), trained with Adam for 500 steps. Every other strike is held out of training.
+Prior `dZ = κ(T) μθ(Z) dt + σθ(Z) dW`; posterior drift `κ(T) μθ(Z) + gφ(Z, ctx, t)` up to the last visible
+photo, prior afterwards. Ripeness `r = w·Z + c`; stage `k` iff `θ_{k−1} < r ≤ θ_k` (cumulative-link ordinal
+head); spoilage `τ = inf{t : r(Z_t) ≥ θ_4}`. Trained with the latent-SDE ELBO of Li et al. (2020):
 
-**Result.** The neural SDE recovers the skew at all three maturities, including at strikes it never saw. Final evaluation uses 524,288 fresh paths.
+```
+log p(stages | Z)  +  log[ P(crossed by hi) − P(crossed by lo) ]  −  ½ ∫ |(f_post − f_prior)/σ|² dt  −  KL(q(z₀) ‖ p(z₀))
+```
 
-| Implied-vol RMSE (vol pts) | Train strikes | Held-out strikes |
-|---|---|---|
-| Neural local-vol SDE | **0.31** | **0.26** |
-| Flat Black-Scholes | 4.21 | 3.87 |
+The crossing probability of a sampled path is a sigmoid of its running maximum's distance to the boundary
+(the hard indicator has zero pathwise gradient), averaged over a few posterior paths. Right-censored fruit
+contribute `log[1 − P(crossed by t_last)]`. At prediction time the prior is rolled forward from the posterior
+state with 64 Brownian paths and the hard indicator gives the CDF. `κ(T)` is `exp(−Eₐ/R (1/T − 1/T_ref))` with a
+learnable `Eₐ` initialised at 50 kJ/mol (the value implied by the paper's T10 vs T20 rates); a per-group clock is
+the fallback, because in this data the ambient group ripened *faster* than the 20 °C group.
 
-**Caveats.**
-- A local-vol model can in principle match any arbitrage-free smile (Dupire), so the point here is the gradient pipeline, not the model class.
-- The remaining error is mostly Monte Carlo noise: the training curve flattens at the noise floor.
-- The worst-fit points are the short-dated far right wing, where the model under-prices the smile's upturn.
+Gradients through the solve are a config switch — `method: backprop | checkpoint | adjoint` — using the
+`nsde.sde_solve` wrapper benchmarked below.
 
-This follows the idea of Gierjatowicz et al., *Robust pricing and hedging via neural SDEs* (2020), at toy scale.
+## Reproduce
 
 ```bash
-python experiments/local_vol_calibration.py          # ~12 min on a 2-core CPU
+git clone https://github.com/nishadw/ripen && cd ripen
+pip install -e ".[dev]"            # add ,features for the torchvision backbone
+make test                          # 42 tests, ~2 min on CPU, includes the fake-fruit recovery
+make smoke                         # every model: build, loss, gradient, predict on one batch
+make synthetic-quick               # results/synthetic/recovery.png
+# real data: download the Mendeley avocado set into data/avocado (CC BY 4.0), then
+make splits features baselines sequence sde summary
 ```
 
-## 2. How should you differentiate an SDE solve?
+Every experiment is one Hydra command (`python scripts/train.py model=latent_sde data=avocado +experiment=logo
+splits.held_out=T10`) with a matching SLURM script in [`slurm/`](slurm/). Splits are by fruit, never by photo,
+and the split files are committed.
 
-![Adjoint trade-offs](assets/adjoint_tradeoffs.png)
+## Data
 
-A neural SDE with a 16-dim state and 32 sample paths, solved with reversible Heun; gradient of a terminal loss with respect to all network parameters. Memory is XLA's compiled temporary-buffer size.
+| Dataset | License | Items | Tracked over time | Storage logged | Role |
+|---|---|---|---|---|---|
+| 'Hass' avocado ripening photos (Mendeley 10.17632/3xd9n945v8.1) | CC BY 4.0 | 478 fruit / 14,710 photos | daily, two sides | 10 °C, 20 °C, ambient | training |
+| Stevens Institute produce set | — | unknown | ~every other day | unknown | pending; loader stub + manifest schema |
+| TriModal Ripeness 6 (figshare 10.6084/m9.figshare.30783827) | CC BY 4.0 | 6 produce types | 3×/day until spoilage | no | multi-produce (structure unverified) |
+| FreshLab-Tomato (IEEE DataPort 10.21227/wvqh-5c80) | unlisted / login | 12 tomatoes | 3×/day, 3 views | **T and RH** | κ(T) test |
 
-| Method | What it does | Memory vs. steps | Gradient |
-|---|---|---|---|
-| **Backprop** | reverse-mode AD through every solver step | grows linearly | exact for the discretised solve |
-| **Recursive checkpointing** | store a few states, recompute the rest | grows very slowly | exact |
-| **Stochastic adjoint** | solve a backward SDE for the gradient (Li et al., 2020) | flat | approximate |
+Full survey with what each set can and cannot be used for: [`docs/dataset_survey.md`](docs/dataset_survey.md).
 
-**Findings.**
-- **The adjoint delivers constant memory, but with a large constant.** Its memory doesn't move with step count, but at this size it sits at ~154 MB, and it grows with parameter count and noise channels ([`adjoint_memory_scaling.py`](experiments/adjoint_memory_scaling.py)). Backprop needed 10.3 MB even at 512 steps.
-- **What the adjoint's memory scales with:** going from 256 to 1,024 noise channels took it from 62 MB to 438 MB; going from 4k to 42k parameters took it from 95 MB to 389 MB (at 512 channels). Backprop used at most 3 MB in every one of those configurations at 64 steps.
-- **The adjoint is slow:** about 64× slower than backprop per gradient here.
-- **The adjoint gradient is approximate, even with reversible Heun.** Diffrax's `BacksolveAdjoint` solves the *continuous* adjoint ("optimise-then-discretise"), so its error is a discretisation error that shrinks as steps increase. The exact, constant-memory scheme of Kidger et al. (2021) pairs reversible Heun with a matching *discrete* adjoint; it is implemented in `torchsde`.
-- **A reversible solver alone doesn't fix it.** Plain Heun's adjoint error was actually lower than reversible Heun's here. Both fall roughly like 1/steps.
-- **Recursive checkpointing is the practical choice** at these scales: exact gradients, about 1 MB even at 512 steps, and within 1.5× of backprop's speed. That matches Diffrax's own recommendation.
+## Where this sits in the literature
 
-```bash
-python experiments/adjoint_tradeoffs.py              # full sweep, ~45 min on a 2-core CPU
-python experiments/adjoint_tradeoffs.py --quick      # ~3 min
-python experiments/adjoint_memory_scaling.py         # compile-only, ~2 min
-```
-
-## Using the package
-
-```python
-import jax, jax.numpy as jnp, equinox as eqx
-from nsde import NeuralSDE, sde_solve
-
-model = NeuralSDE(state_dim=4, width=32, depth=2, key=jax.random.PRNGKey(0))
-params, static = eqx.partition(model, eqx.is_inexact_array)
-drift = lambda t, y, p: eqx.combine(p, static).drift(t, y)
-diffusion = lambda t, y, p: eqx.combine(p, static).diffusion(t, y)
-
-def loss(p, key):
-    y_T = sde_solve(drift, diffusion, jnp.ones(4), p, key,
-                    n_steps=100, solver="reversible_heun",
-                    method="checkpoint")      # or "backprop" / "adjoint"
-    return jnp.sum(y_T ** 2)
-
-grads = jax.grad(loss)(params, jax.random.PRNGKey(1))
-```
-
-Parameters must go through `args` (here `p`), not a closure: `BacksolveAdjoint` can only differentiate explicit inputs.
-
-## Install and test
-
-```bash
-git clone https://github.com/nishadw/neural-sde && cd neural-sde
-pip install -e ".[dev]"
-pytest                                               # 8 tests, ~1 min
-```
-
-The tests check:
-- the three gradient methods agree,
-- checkpointing matches backprop exactly,
-- Black-Scholes and implied-vol round-trip,
-- Heston reduces to Black-Scholes as vol-of-vol → 0,
-- negative spot-vol correlation produces a downside skew.
+Full review with verified DOIs / arXiv IDs and a gap table: [`docs/literature_review.md`](docs/literature_review.md).
+In one paragraph: produce-imaging papers predict a stage or a point estimate from one photo and discard
+censored items. Deep survival models (DeepSurv, DeepHit, Dynamic-DeepHit, SurvLatent ODE) model the hazard
+from static or sequential covariates; DeepFHT (2025) is the nearest neighbour — event as the first hitting time
+of a *closed-form* Brownian motion whose parameters a network reads off static covariates — and ICODEN (2026)
+handles interval censoring with a neural hazard, again from static covariates. Food science has modelled
+ripening rate as an Arrhenius function of temperature for decades, with hand-measured quality attributes.
+Nobody has fit a learned nonlinear latent SDE's first passage to interval-censored image sequences with a
+physical temperature clock. That combination, on the censored fruit both prior avocado papers dropped, is the claim.
 
 ## Repository layout
 
 ```
-src/nsde/
-  models.py        NeuralSDE (drift + diagonal diffusion MLPs), LocalVolatility
-  solve.py         sde_solve(): one switch for backprop / checkpoint / adjoint
-  finance.py       Black-Scholes, vectorised implied vol, Heston (Fourier) pricer
-experiments/
-  local_vol_calibration.py    neural local-vol vs. Heston smile
-  adjoint_tradeoffs.py        memory / time / error sweep over solver steps
-  adjoint_memory_scaling.py   what the adjoint's memory grows with
-  demo_video/                 renders assets/demo.mp4 and demo.gif from real runs
-tests/             pytest suite (runs in CI)
-results/           JSON outputs of the experiments
-assets/            figures, demo video
-lecture/           slides (.pptx, .pdf), reading guide (.docx), demo, build scripts
+src/ripen/
+  data/        schema (Item, Visit), synthetic simulator, avocado loader, Stevens stub, splits, feature cache
+  models/      heads (ordinal, discrete survival), clocks, encoders, baselines, sequence models, latent ODE/SDE, FPT
+  train/       one trainer for every model
+  eval/        metrics (MAE, CRPS, coverage, C-index, reliability), prediction instances, plots
+  pipeline.py  glue for the scripts
+src/nsde/      SDE solve with a gradient-method switch; Black-Scholes / Heston pricers (foundations)
+configs/       Hydra: data/, model/, train/, experiment/
+scripts/       train, evaluate, make_splits, extract_features, synthetic_recovery, smoke_all, summarize
+slurm/         one job script per experiment; account / partition / qos are CHANGE_ME in slurm/common.sh
+tests/         42 CPU tests, run in CI
+docs/          literature review, dataset survey, experiment plan, course proposal
+experiments/   the nsde gradient benchmark and local-vol calibration
+lecture/       CMSC 838B lecture: slides, speaker notes, reading guide, demo
 ```
 
-## The lecture
+## Foundations
 
-*Backprop Through Continuous Time: Neural SDEs: Modeling, Gradients, and Training*. A graduate student lecture (22 slides plus a 9-slide appendix) built around one running example: predicting avocado shelf life from daily photos, using the data, figures and baselines of Xavier, Rodrigues & Silva, [*Foods* 13:1150 (2024)](https://doi.org/10.3390/foods13081150). It covers:
+The SDE machinery was built first, as a lecture companion, and benchmarked on two problems that are still here.
 
-- **The running example:** the paper's classify-then-regress pipeline, read as a constant-drift ODE, and why its errors call for a distribution over shelf life.
-- **Continuous time:** neural ODEs, and three ways to differentiate a solver (backprop, checkpointing, adjoint).
-- **Stochastic dynamics:**
-  - the Itô toolkit and Itô vs. Stratonovich;
-  - a latent neural SDE for ripening with an ordinal observation head;
-  - an Arrhenius drift prior fitted to the paper's rates (Eₐ ≈ 50 kJ/mol);
-  - a first-passage check of the paper's error ratios.
-- **Gradients through randomness:**
-  - pathwise vs. score-function estimators;
-  - why the gradient of a first-passage probability is zero pathwise;
-  - the stochastic adjoint;
-  - the benchmark in this repo.
-- **Training and limits:**
-  - the latent-SDE ELBO via Girsanov;
-  - diffusion models as neural SDEs;
-  - a proposed evaluation against the paper's baseline;
-  - applications and open problems.
-- **Appendix (not presented):** derivations (ODE adjoint, Girsanov KL, inverse-Gaussian first passage, Arrhenius fit), a solver table, Brownian bridges, and the benchmark setup.
+**How should you differentiate an SDE solve?** A 16-dim neural SDE, 32 paths, reversible Heun; gradient of a
+terminal loss. Backprop through the solver is exact and its memory grows linearly with steps (10.3 MB at 512);
+recursive checkpointing is exact at about 1 MB and within 1.5× the speed; the stochastic adjoint
+(Li et al. 2020) is constant in steps but with a large constant (~154 MB here, growing with parameters and
+noise channels), 64× slower, and approximate — its error falls like 1/steps because Diffrax solves the
+continuous adjoint. Checkpointing is the practical choice and is `ripen`'s default.
 
-The latent-SDE results on the avocado data are in progress; the baseline column comes from the paper.
+![Adjoint trade-offs](assets/adjoint_tradeoffs.png)
 
-- [Slides (PDF)](lecture/neural_sde_lecture.pdf) · [PowerPoint with speaker notes](lecture/neural_sde_lecture.pptx)
-- [Reading and prep guide](lecture/neural_sde_reading_guide.docx)
-- [Live demo script](lecture/neural_sde_demo.py)
+**Calibrating a neural local-volatility SDE** to a Heston implied-vol smile by differentiating a Monte Carlo
+pricer end to end: 0.31 vol-point RMSE on quoted strikes and 0.26 on held-out strikes, against 4.2 for the best
+flat Black-Scholes vol. `experiments/local_vol_calibration.py`, ~12 min on CPU.
+
+![Neural local-vol calibration](assets/local_vol_calibration.png)
+
+A 52-second silent demo of both, rendered from real runs: [`assets/demo.mp4`](assets/demo.mp4) (`assets/demo.gif`).
+
+## Lecture
+
+*Backprop Through Continuous Time: Neural SDEs — Modeling, Gradients, and Training*, a graduate lecture for
+CMSC 838B built around the avocado shelf-life problem: neural ODEs and three ways to differentiate a solver,
+the Itô toolkit, a latent SDE for ripening with an ordinal head and an Arrhenius prior, pathwise vs.
+score-function gradients, the stochastic adjoint, the latent-SDE ELBO via Girsanov, diffusion models as
+neural SDEs. [`lecture/`](lecture/) has the slides (PDF, PPTX with notes), reading guide and demo script.
 
 ## References
 
-- Chen, Rubanova, Bettencourt, Duvenaud. [Neural Ordinary Differential Equations](https://arxiv.org/abs/1806.07366). NeurIPS 2018.
-- Li, Wong, Chen, Duvenaud. [Scalable Gradients for Stochastic Differential Equations](https://arxiv.org/abs/2001.01328). AISTATS 2020.
-- Kidger, Foster, Li, Lyons. [Efficient and Accurate Gradients for Neural SDEs](https://arxiv.org/abs/2105.13493). NeurIPS 2021.
-- Kidger. [On Neural Differential Equations](https://arxiv.org/abs/2202.02435). PhD thesis, 2022.
-- Gierjatowicz, Sabate-Vidales, Šiška, Szpruch, Žurič. [Robust pricing and hedging via neural SDEs](https://arxiv.org/abs/2007.04154). J. Computational Finance, 2022.
-- Song et al. [Score-Based Generative Modeling through SDEs](https://arxiv.org/abs/2011.13456). ICLR 2021.
-- Heston. A closed-form solution for options with stochastic volatility. Review of Financial Studies, 1993.
-- Albrecher, Mayer, Schoutens, Tistaert. The little Heston trap. Wilmott, 2007.
+Verified citations with DOIs / arXiv IDs are in [`docs/literature_review.md`](docs/literature_review.md). The ones the code implements directly:
 
-Built on [JAX](https://github.com/jax-ml/jax), [Equinox](https://github.com/patrick-kidger/equinox), and [Diffrax](https://github.com/patrick-kidger/diffrax).
+- Li, Wong, Chen, Duvenaud. Scalable Gradients for Stochastic Differential Equations. AISTATS 2020. arXiv:2001.01328.
+- Kidger, Foster, Li, Lyons. Efficient and Accurate Gradients for Neural SDEs. NeurIPS 2021. arXiv:2105.13493.
+- Rubanova, Chen, Duvenaud. Latent ODEs for Irregularly-Sampled Time Series. NeurIPS 2019. arXiv:1907.03907.
+- Che, Purushotham, Cho, Sontag, Liu. Recurrent Neural Networks for Multivariate Time Series with Missing Values. 2016. arXiv:1606.01865.
+- Avati et al. Countdown Regression: Sharp and Calibrated Survival Predictions. 2018. arXiv:1806.08324.
+- Xavier, Rodrigues, Silva. Shelf-Life Management and Ripening Assessment of 'Hass' Avocado Using Deep Learning Approaches. Foods 13(8):1150, 2024. doi:10.3390/foods13081150.
+- Van Boekel. Kinetic Modeling of Food Quality: A Critical Review. Compr Rev Food Sci Food Saf, 2008. doi:10.1111/j.1541-4337.2007.00036.x.
+- Gierjatowicz et al. Robust pricing and hedging via neural SDEs. J. Computational Finance, 2022. arXiv:2007.04154.
+
+Built on [JAX](https://github.com/jax-ml/jax), [Equinox](https://github.com/patrick-kidger/equinox), [Diffrax](https://github.com/patrick-kidger/diffrax), [Optax](https://github.com/google-deepmind/optax) and [Hydra](https://hydra.cc).
