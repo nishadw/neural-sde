@@ -1,0 +1,27 @@
+defaults:
+  - data: synthetic
+  - model: latent_sde
+  - train: default
+  - _self_
+
+seed: 0
+horizon: 45              # days-left grid 0..horizon for every model's predicted CDF
+run_name: ${model.name}_${data.name}
+out_dir: results/runs/${run_name}
+
+eval:
+  n_obs_list: all_unspoiled     # every unspoiled prefix of every test item; or a list like [1, 3, 5]
+  batch_size: 64
+  n_obs_ablation: [1, 2, 3, 5, 8]
+
+splits:
+  mode: random                  # random (70/15/15 by item) | logo (leave one storage group out)
+  held_out: T10                 # used when mode == logo
+  seed: 0
+  file: null                    # explicit split file; default results/splits/<data>_<mode>_<...>.json
+
+hydra:
+  run:
+    dir: ${out_dir}/hydra
+  job:
+    chdir: false

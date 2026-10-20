@@ -1,0 +1,8 @@
+# ODE-RNN (Rubanova et al. 2019): ODE between visits, GRU update at visits -> discrete survival head.
+name: ode_rnn
+horizon: ${horizon}
+hidden: 64
+visit_dim: 32
+group_dim: 4
+use_images: true
+use_stages: false

@@ -1,0 +1,5 @@
+# @package _global_
+# Direction 3: photos every other day. Visits are subsampled after loading; the spoilage interval widens.
+data:
+  subsample_every: 2
+run_name: ${model.name}_${data.name}_every2

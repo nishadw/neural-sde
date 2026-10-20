@@ -1,0 +1,8 @@
+# GRU-D (hidden-state decay with the time gap; Che et al. 2016) -> discrete survival head.
+name: gru_d
+horizon: ${horizon}
+hidden: 64
+visit_dim: 32
+group_dim: 4
+use_images: true
+use_stages: false

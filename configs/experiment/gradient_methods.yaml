@@ -1,0 +1,7 @@
+# @package _global_
+# Compare how the gradient is taken through the SDE solve. Sweep: model.method=backprop,checkpoint,adjoint
+model:
+  method: adjoint
+  solver: reversible_heun
+  brownian: virtual_tree
+run_name: ${model.name}_${data.name}_${model.method}

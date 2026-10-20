@@ -1,0 +1,28 @@
+# Main model: latent neural SDE dZ = kappa(T) mu(Z) dt + sigma(Z) dW, ordinal stage head, first-passage spoilage.
+name: latent_sde
+horizon: ${horizon}
+latent_dim: 4
+hidden: 64
+visit_dim: 32
+width: 32
+encoder: gru               # gru | gru_d | ode_rnn (the posterior context encoder)
+use_images: true
+use_stages: true
+drift_kind: mlp            # mlp | linear (unit speed; the clock carries the rate)
+sigma_kind: mlp            # mlp | const
+clock: arrhenius           # arrhenius | group | fixed
+clock_kwargs: {ea_j_mol: 50000.0, rate_ref: 0.473, t_ref_c: 20.0}
+fixed_thresholds: false
+n_sub: 2                   # solver steps per day
+method: checkpoint         # backprop | checkpoint | adjoint   (gradient through the SDE solve)
+solver: euler              # euler | heun | reversible_heun
+brownian: virtual_tree     # virtual_tree (works with every gradient method) | unsafe (forward-mode only)
+n_samples: 64              # Monte Carlo paths for the predicted first-passage CDF
+n_train_samples: 4         # posterior paths per item in the ELBO
+fpt_beta: 0.1              # temperature of the smoothed crossing indicator used in training
+min_sigma: 0.001
+kl_weight: 1.0
+spoil_weight: 1.0
+sigma_prior: null          # e.g. 0.25 with sigma_prior_weight > 0 to counter diffusion under-estimation
+sigma_prior_weight: 0.0
+init_sigma: 0.3

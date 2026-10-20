@@ -1,0 +1,7 @@
+# Per-photo direct days-left regressor with storage context (Huber loss), as in Hangud & Hangud (2026).
+name: direct_reg
+horizon: ${horizon}
+width: 64
+depth: 2
+group_dim: 4
+huber_delta: 2.0

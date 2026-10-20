@@ -1,0 +1,6 @@
+# Per-photo discrete-time survival head (PMF over days left), interval-censored likelihood.
+name: discrete_surv
+horizon: ${horizon}
+width: 64
+depth: 2
+group_dim: 4

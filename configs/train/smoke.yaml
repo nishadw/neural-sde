@@ -1,0 +1,10 @@
+# One or two optimiser steps: proves the model builds, differentiates and predicts. Used by `make smoke`.
+epochs: 1
+batch_size: 8
+lr: 1.0e-3
+weight_decay: 0.0
+grad_clip: 5.0
+patience: 1
+n_obs_mode: random
+log_every: 1
+max_steps: 2

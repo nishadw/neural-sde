@@ -1,0 +1,4 @@
+# @package _global_
+data:
+  subsample_every: 3
+run_name: ${model.name}_${data.name}_every3

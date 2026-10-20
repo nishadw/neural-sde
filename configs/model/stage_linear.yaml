@@ -1,0 +1,5 @@
+# The published baseline: per-photo ordinal stage classifier, then days_left = alpha_g (stage - 5), alpha refit on train.
+name: stage_linear
+horizon: ${horizon}
+width: 64
+depth: 2

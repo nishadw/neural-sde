@@ -1,0 +1,6 @@
+# @package _global_
+# Milestone "first model, using ripeness labels only": no image features into the encoders.
+model:
+  use_images: false
+  use_stages: true
+run_name: ${model.name}_${data.name}_labels_only

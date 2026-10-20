@@ -1,0 +1,9 @@
+epochs: 60
+batch_size: 32
+lr: 1.0e-3
+weight_decay: 1.0e-5
+grad_clip: 5.0
+patience: 10
+n_obs_mode: random      # random: resample the visible prefix every epoch (photo dropout) | all
+log_every: 1
+max_steps: null

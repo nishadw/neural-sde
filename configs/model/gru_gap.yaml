@@ -1,0 +1,8 @@
+# GRU over the visit history with the time gap as an input feature -> discrete survival head.
+name: gru_gap
+horizon: ${horizon}
+hidden: 64
+visit_dim: 32
+group_dim: 4
+use_images: true
+use_stages: false

@@ -1,0 +1,6 @@
+# @package _global_
+# Train on two storage groups, test on the third. Override splits.held_out=T20 / Tamb for the other folds.
+splits:
+  mode: logo
+  held_out: T10
+run_name: ${model.name}_${data.name}_logo_${splits.held_out}
