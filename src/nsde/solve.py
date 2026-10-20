@@ -18,7 +18,7 @@ over), otherwise ``BacksolveAdjoint`` cannot see them.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import diffrax as dfx
 import jax.numpy as jnp
@@ -64,7 +64,7 @@ def sde_solve(
     shape = jnp.shape(y0)
     if brownian == "virtual_tree":
         bm = dfx.VirtualBrownianTree(0.0, t1, tol=bm_tol if bm_tol is not None else dt / 8, shape=shape, key=key)
-    elif brownian == "unsafe":  # fast, fixed-step only, not for BacksolveAdjoint
+    elif brownian == "unsafe":  # fast, fixed-step; diffrax >= 0.7 rejects it under reverse-mode adjoints
         bm = dfx.UnsafeBrownianPath(shape=shape, key=key)
     else:
         raise ValueError(brownian)

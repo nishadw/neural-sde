@@ -23,9 +23,9 @@ import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
+from style import COLORS, save, setup
 
 from nsde import NeuralSDE, sde_solve
-from style import COLORS, save, setup
 
 jax.config.update("jax_enable_x64", True)
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -58,7 +58,7 @@ def build(n_steps, method, solver, model, n_paths, key, tol):
 
 
 def rel_err(g, ref):
-    num = jnp.sqrt(sum(jnp.sum((a - b) ** 2) for a, b in zip(jax.tree.leaves(g), jax.tree.leaves(ref))))
+    num = jnp.sqrt(sum(jnp.sum((a - b) ** 2) for a, b in zip(jax.tree.leaves(g), jax.tree.leaves(ref), strict=True)))
     den = jnp.sqrt(sum(jnp.sum(b**2) for b in jax.tree.leaves(ref)))
     return float(num / den)
 
@@ -68,13 +68,29 @@ def plot(out, steps):
 
     setup()
     methods = ["backprop", "checkpoint", "adjoint"]
-    labels = {"backprop": "Backprop through every step", "checkpoint": "Recursive checkpointing", "adjoint": "Stochastic adjoint"}
+    labels = {
+        "backprop": "Backprop through every step",
+        "checkpoint": "Recursive checkpointing",
+        "adjoint": "Stochastic adjoint",
+    }
     fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
     for m in methods:
         axes[0].plot(out[m]["steps"], out[m]["temp_mb"], "-o", color=COLORS[m], label=labels[m])
         axes[1].plot(out[m]["steps"], np.array(out[m]["seconds"]), "-o", color=COLORS[m], label=labels[m])
-    axes[2].plot(out["adjoint"]["steps"], out["adjoint"]["rel_err"], "-o", color=COLORS["adjoint"], label="Adjoint, reversible Heun")
-    axes[2].plot(out["adjoint_heun"]["steps"], out["adjoint_heun"]["rel_err"], "--o", color=COLORS["muted"], label="Adjoint, Heun")
+    axes[2].plot(
+        out["adjoint"]["steps"],
+        out["adjoint"]["rel_err"],
+        "-o",
+        color=COLORS["adjoint"],
+        label="Adjoint, reversible Heun",
+    )
+    axes[2].plot(
+        out["adjoint_heun"]["steps"],
+        out["adjoint_heun"]["rel_err"],
+        "--o",
+        color=COLORS["muted"],
+        label="Adjoint, Heun",
+    )
     axes[0].set(title="Memory for the gradient", ylabel="XLA temp buffers (MB)", yscale="log")
     axes[1].set(title="Time per gradient", ylabel="seconds", yscale="log")
     axes[2].set(title="Adjoint gradient error vs. backprop", ylabel="relative L2 error", yscale="log")
@@ -124,8 +140,12 @@ def main(quick=False):
         fa, _ = build(n, "adjoint", "heun", model, n_paths, key, tol)
         out["adjoint_heun"]["steps"].append(n)
         out["adjoint_heun"]["rel_err"].append(rel_err(fa(params), fb(params)))
-        print(f"steps={n:4d}  " + "  ".join(f"{m}: {out[m]['temp_mb'][-1]:7.2f} MB {out[m]['seconds'][-1]*1e3:7.1f} ms" for m in methods)
-              + f"  adjoint err={out['adjoint']['rel_err'][-1]:.2e}", flush=True)
+        print(
+            f"steps={n:4d}  "
+            + "  ".join(f"{m}: {out[m]['temp_mb'][-1]:7.2f} MB {out[m]['seconds'][-1] * 1e3:7.1f} ms" for m in methods)
+            + f"  adjoint err={out['adjoint']['rel_err'][-1]:.2e}",
+            flush=True,
+        )
 
     (ROOT / "assets").mkdir(exist_ok=True)
     (ROOT / "results").mkdir(exist_ok=True)

@@ -5,7 +5,13 @@ import pytest
 
 from nsde import NeuralSDE, sde_solve
 
-jax.config.update("jax_enable_x64", True)
+
+@pytest.fixture(scope="module", autouse=True)
+def _x64():
+    """These tolerances need float64; switch it on for this module only."""
+    jax.config.update("jax_enable_x64", True)
+    yield
+    jax.config.update("jax_enable_x64", False)
 
 
 def _loss(model, key, method, solver="reversible_heun", n_steps=40):
@@ -31,7 +37,7 @@ def model():
 
 def _max_rel_err(g1, g2):
     leaves1, leaves2 = jax.tree.leaves(g1), jax.tree.leaves(g2)
-    num = max(float(jnp.max(jnp.abs(a - b))) for a, b in zip(leaves1, leaves2))
+    num = max(float(jnp.max(jnp.abs(a - b))) for a, b in zip(leaves1, leaves2, strict=True))
     den = max(float(jnp.max(jnp.abs(b))) for b in leaves2)
     return num / den
 

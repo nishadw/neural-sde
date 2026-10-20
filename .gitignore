@@ -8,8 +8,20 @@ dist/
 .venv/
 venv/
 .pytest_cache/
+.ruff_cache/
 .ipynb_checkpoints/
 .DS_Store
 node_modules/
 lecture/build/*.pdf
 experiments/demo_video/_cache/
+
+# data and run outputs: raw data never enters git; split files and summaries do
+data/
+!data/README.md
+results/runs/
+results/logs/
+results/synthetic/run/
+outputs/
+multirun/
+*.eqx
+*.npz

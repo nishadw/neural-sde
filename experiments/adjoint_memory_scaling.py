@@ -12,8 +12,8 @@ import pathlib
 
 import equinox as eqx
 import jax
-
 from adjoint_tradeoffs import build
+
 from nsde import NeuralSDE
 
 jax.config.update("jax_enable_x64", True)

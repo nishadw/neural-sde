@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nsde"
-version = "0.1.0"
-description = "Neural SDEs in JAX: adjoint vs. backprop gradients, and a neural local-volatility calibration"
+name = "ripen"
+version = "0.2.0"
+description = "Distributional shelf-life prediction from produce photos with latent neural SDEs, plus the gradient benchmark and SDE calibration they are built on"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -17,11 +17,16 @@ dependencies = [
   "optax>=0.2",
   "numpy",
   "scipy",
+  "pandas",
+  "openpyxl",
   "matplotlib",
+  "hydra-core>=1.3",
+  "omegaconf>=2.3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.5", "pre-commit", "lifelines"]
+features = ["torch", "torchvision", "pillow"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -29,3 +34,20 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["slow: takes more than ~30 s on CPU"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["lecture/build", "experiments/demo_video"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["E741", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"lecture/*" = ["E731"]
+"experiments/*" = ["E731"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nsde", "ripen"]
