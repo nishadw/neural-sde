@@ -158,10 +158,12 @@ def _write_fake_manifests(tmp: Path):
 
 def test_loaders_on_fake_manifests(tmp_path):
     man, scans, feats = _write_fake_manifests(tmp_path)
-    items = load_a2sl_avocado(man, features=feats, scans=scans, photo_dim=8)
+    items = load_a2sl_avocado(man, features=feats, scans=scans, photo_dim=8, labels=None)
     assert [it.item_id for it in items] == ["avo01", "avo04"]
     a1, a4 = items
     assert a1.n_visits == 3 and a1.right_censored and a1.spoil_lo == 4.0 and a1.meta["tracked_to_end"]
+    labelled = load_a2sl_avocado(man, features=feats, scans=scans, photo_dim=8)
+    assert [v.stage for v in labelled[0].visits] == [1, 2, 3] and labelled[0].right_censored
     assert a4.n_visits == 1 and a4.meta["cut_day"] == 1 and a4.meta["cut_photo"] == ["p/day1/04_cut.jpg"]
     assert a1.visits[0].features.shape == (1, 8 + 2 * (4 + SCAN_RADIAL_BINS))
     info = dataset_info(items)
@@ -179,7 +181,10 @@ def test_committed_manifests_parse():
     assert len(items) == 15
     assert sum(it.meta["tracked_to_end"] for it in items) == 4
     assert sorted(it.meta["cut_day"] for it in items if it.meta["cut_day"]) == [1, 3, 5, 7, 9, 11, 13]
-    assert all(it.n_visits == 7 for it in items if it.meta["tracked_to_end"])
+    tracked = [it for it in items if it.meta["tracked_to_end"]]
+    # with the day-determined labels every tracked fruit is seen spoiled at day 9: interval (7, 9], 5 visits kept
+    assert all(it.n_visits == 5 and (it.spoil_lo, it.spoil_hi) == (6.0, 8.0) for it in tracked)
+    assert all(it.n_visits == 7 for it in load_a2sl_avocado(labels=None) if it.meta["tracked_to_end"])
     pilot = load_a2sl_pilot()
     assert len(pilot) == 6
     wm = load_a2sl_watermelon()

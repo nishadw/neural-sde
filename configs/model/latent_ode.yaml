@@ -8,7 +8,10 @@ width: 32
 encoder: gru
 use_images: true
 use_stages: true
+structured: true
+event_likelihood: pde
 drift_kind: mlp
+monotone_drift: true
 clock: arrhenius
 clock_kwargs: {ea_j_mol: 50000.0, rate_ref: 0.473, t_ref_c: 20.0}
 fixed_thresholds: false
@@ -21,3 +24,7 @@ n_train_samples: 2
 fpt_beta: 0.1
 kl_weight: 1.0
 spoil_weight: 1.0
+pde_grid: 160              # r-grid points for the backward Kolmogorov solve
+pde_ds: 0.02               # physiological-time step
+pde_steps: 2500            # table covers s in [0, pde_ds * pde_steps]
+pde_r_min: -1.0

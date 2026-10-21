@@ -17,7 +17,7 @@ from ripen.data.stevens import load_manifest
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", choices=["avocado", "stevens"], required=True)
+    ap.add_argument("--data", choices=["avocado", "stevens", "a2sl"], required=True)
     ap.add_argument("--root", default="data/avocado")
     ap.add_argument("--labels", default=None)
     ap.add_argument("--images-dir", default=None)
@@ -27,11 +27,14 @@ def main() -> None:
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
-    items = (
-        load_avocado(args.root, args.labels, args.images_dir)
-        if args.data == "avocado"
-        else load_manifest(args.manifest)
-    )
+    if args.data == "avocado":
+        items = load_avocado(args.root, args.labels, args.images_dir)
+    elif args.data == "a2sl":
+        from ripen.data.a2sl import load_a2sl_avocado, load_a2sl_pilot
+
+        items = load_a2sl_avocado(labels=None) + load_a2sl_pilot()
+    else:
+        items = load_manifest(args.manifest)
     paths = sorted({p for it in items for v in it.visits for p in v.image_paths})
     missing = [p for p in paths if not Path(p).exists()]
     if missing:

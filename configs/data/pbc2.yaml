@@ -1,0 +1,15 @@
+# PBC2: Mayo primary biliary cirrhosis trial, longitudinal labs + death/transplant, 312 patients.
+# Source: pbc2_cleaned.csv from https://github.com/chl8856/Dynamic-DeepHit/tree/master/data (data/ is gitignored):
+#   curl -sSL -o data/pbc2/pbc2_cleaned.csv \
+#     https://raw.githubusercontent.com/chl8856/Dynamic-DeepHit/master/data/pbc2_cleaned.csv
+# Time unit is MONTHS since the first visit (the file is in weeks; the loader converts). Follow-up runs to
+# ~172 months, so override the global horizon: `python scripts/train.py data=pbc2 horizon=180`.
+# See src/ripen/data/pbc2.py and docs/data_second_domain.md.
+name: pbc2
+path: data/pbc2/pbc2_cleaned.csv
+transplant_as_event: false      # false: transplant is right-censoring (meta.competing marks it); true: composite endpoint
+log_skewed: true                # log1p serBilir, serChol, alkaline, SGOT before standardising
+time_unit: months
+horizon: 180                    # suggestion for the top-level `horizon` (not read automatically)
+subsample_every: 1              # keep every k-th visit; the registry event time is kept, only spoil_lo moves
+subsample_offset: 0

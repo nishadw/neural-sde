@@ -23,10 +23,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .schema import Item, Visit
+from .schema import Item, Visit, spoil_interval_from_visits
 
 MAN = Path("data/manifests")
 SCAN_RADIAL_BINS = 8
+
+# Ripeness classes of Wu et al., IEEE J. Microwaves 6(1):273-284, 2026 (doi:10.1109/JMW.2025.3636171), Fig. 4:
+# every image of a given study day carries the same class (0 unripe, 1 barely ripe, 2 ripe, 3 almost overripe,
+# 4 overripe), validated by colour, firmness and the fruit cut open that day. Mapped onto the 5-stage index used
+# here (1..5), with stage 5 = end of shelf life, so every fruit's spoilage interval is (day 7, day 9].
+JMW2026_DAY_STAGE = {1: 1, 3: 2, 5: 3, 7: 4, 9: 5, 11: 5, 13: 5}
 
 
 def scan_summary(grid: np.ndarray, n_bins: int = SCAN_RADIAL_BINS) -> np.ndarray:
@@ -94,8 +100,14 @@ def load_a2sl_avocado(
     features: dict[str, np.ndarray] | None = None,
     scans: dict[str, np.ndarray] | None = None,
     photo_dim: int = 512,
+    labels: str | None = "jmw2026",
 ) -> list[Item]:
-    """Items from ``a2sl_avocado_visits.csv``; ``features`` keyed by JPEG filename, ``scans`` by scan key."""
+    """Items from ``a2sl_avocado_visits.csv``; ``features`` keyed by JPEG filename, ``scans`` by scan key.
+
+    ``labels="jmw2026"`` assigns the published day-determined ripeness class to every visit (see
+    ``JMW2026_DAY_STAGE``) and derives the spoilage interval from the first stage-5 visit; ``labels=None``
+    leaves every visit unlabelled and right-censored at its last visit.
+    """
     man = Path(manifests)
     visits = pd.read_csv(man / "a2sl_avocado_visits.csv")
     props = pd.read_csv(man / "a2sl_avocado_items.csv").set_index("item_id")
@@ -109,14 +121,18 @@ def load_a2sl_avocado(
             keys = str(r.scan_keys).split(";") if isinstance(r.scan_keys, str) else []
             photo = _photo_feature([r.side_photo], features) if isinstance(r.side_photo, str) else None
             feat = _combine(photo, _scan_features(keys, scans), photo_dim, scan_dim)
+            stage = JMW2026_DAY_STAGE.get(int(r.day)) if labels == "jmw2026" else None
             vs.append(
                 Visit(
                     t=float(r.day) - day0,
-                    stage=None,
+                    stage=stage,
                     image_paths=(r.side_photo,) if isinstance(r.side_photo, str) else (),
                     features=feat,
                 )
             )
+            if stage is not None and stage >= 5:
+                break
+        lo, hi = spoil_interval_from_visits(vs)
         p = props.loc[item_id]
         items.append(
             Item(
@@ -125,10 +141,11 @@ def load_a2sl_avocado(
                 storage="ambient",
                 temp_c=math.nan,
                 visits=vs,
-                spoil_lo=vs[-1].t,
-                spoil_hi=math.inf,
+                spoil_lo=lo,
+                spoil_hi=hi,
                 meta={
                     "source": "a2sl_avocado_jun2023",
+                    "label_source": labels,
                     "cut_day": None if pd.isna(p.cut_day) else int(p.cut_day),
                     "tracked_to_end": bool(p.tracked_to_end),
                     "mass_g": float(p.mass_g),

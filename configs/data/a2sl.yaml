@@ -1,0 +1,14 @@
+# A2SL / Stevens microwave-imaging avocados (Wu et al., IEEE J. Microwaves 2026): 15 fruit, visits every other
+# day, day-determined ripeness labels (docs/data_a2sl.md). Run `python scripts/ingest_a2sl.py` once to build the
+# manifests and scan cache; photo features via `scripts/extract_features.py --data a2sl`.
+name: a2sl
+manifests: data/manifests
+features_file: data/features/a2sl_resnet18.npz     # null = no photo features
+scans_file: data/a2sl/scans_avocado_jun2023.npz    # null = no microwave features
+labels: jmw2026                                    # jmw2026 | null (unlabelled, right-censored)
+include_pilot: false                               # add the 6 daily pilot avocados (photos only, unlabelled)
+photo_dim: 512
+time_unit: days
+horizon: 20
+subsample_every: 1
+subsample_offset: 0

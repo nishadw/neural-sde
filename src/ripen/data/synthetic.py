@@ -1,7 +1,9 @@
 """Fake fruit: ripening simulated from a known SDE, quantised to stages, observed on a visit schedule.
 
 The latent ripeness ``Z`` lives in stage units. Starting near stage 1 it
-follows ``dZ = v_g dt + sigma dW`` for storage group ``g``; the item is
+follows ``dZ = v_g dt + sigma sqrt(v_g) dW`` for storage group ``g`` (the clock on the generator: in
+physiological time ``s = v_g t`` every group follows ``dZ = ds + sigma dW_s``; ``noise_scaling="drift"`` keeps
+``sigma`` in calendar units instead); the item is
 spoiled at the first time ``Z`` reaches ``SPOILED_STAGE``. Defaults are the
 rates implied by Table 4 of Xavier et al. (2024): 0.228 / 0.473 / 0.518
 stages per day for T10 / T20 / Tamb. For constant drift the first-passage
@@ -26,7 +28,12 @@ class SyntheticConfig:
     n_items: int = 300
     rates: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_RATES))
     temps: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_TEMPS))
-    sigma: float = 0.25  # stage units per sqrt(day)
+    sigma: float = (
+        0.25  # stage units per sqrt(physiological day); calendar noise is sigma * sqrt(rate) (see noise_scaling)
+    )
+    noise_scaling: str = (
+        "generator"  # "generator": calendar sigma = sigma*sqrt(rate) (clock on the generator) | "drift": sigma
+    )
     z0_mean: float = 1.2
     z0_sd: float = 0.15
     visit_interval: int = 1  # days between scheduled visits
@@ -38,6 +45,9 @@ class SyntheticConfig:
     label_noise: float = 0.0  # probability a stage label is off by one
     produce: str = "synthetic"
     seed: int = 0
+
+    def calendar_sigma(self, rate: float) -> float:
+        return self.sigma * math.sqrt(rate) if self.noise_scaling == "generator" else self.sigma
 
 
 def _stage_of(z: float) -> int:
@@ -53,7 +63,7 @@ def simulate(cfg: SyntheticConfig, rng: np.random.Generator | None = None) -> li
     items: list[Item] = []
     for i in range(cfg.n_items):
         g = groups[i % len(groups)]
-        v, sd = cfg.rates[g], cfg.sigma
+        v, sd = cfg.rates[g], cfg.calendar_sigma(cfg.rates[g])
         z0 = float(np.clip(rng.normal(cfg.z0_mean, cfg.z0_sd), 1.0, SPOILED_STAGE - 0.5))
         noise = rng.normal(size=n_steps) * sd * math.sqrt(cfg.dt)
         path = z0 + np.cumsum(v * cfg.dt + noise)

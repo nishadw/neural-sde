@@ -1,0 +1,19 @@
+# NASA C-MAPSS turbofan run-to-failure (train_FD001..FD004), one item per engine, failure exact at the last cycle.
+# Source: https://data.nasa.gov/docs/legacy/CMAPSSData.zip (data/ is gitignored):
+#   curl -sSL -o data/cmapss/CMAPSSData.zip https://data.nasa.gov/docs/legacy/CMAPSSData.zip && \
+#     (cd data/cmapss && unzip -o CMAPSSData.zip)
+# Time unit is `inspect_every` cycles (visits ~1 unit apart). FD001 engines run 128-362 cycles, so with
+# inspect_every=10 the horizon in units is ~36: `python scripts/train.py data=cmapss horizon=40`
+# (FD004 runs to 543 cycles: horizon=55). See src/ripen/data/cmapss.py and docs/data_second_domain.md.
+name: cmapss
+root: data/cmapss
+subsets: [FD001]                # any of FD001..FD004; storage group = subset name
+inspect_every: 10               # nominal cycles between visits; also the time unit
+jitter: 2                       # visits are offset by U{-jitter..jitter} cycles
+seed: 0                         # seeds the jitter and drop_tail censoring
+drop_tail: 0.0                  # fraction of engines right-censored at a random cycle (censoring ablation)
+drop_constant: true             # drop columns constant over the loaded subsets (FD001: setting3, s1, s5, s10, s16, s18, s19)
+time_unit: inspections
+horizon: 40                     # suggestion for the top-level `horizon` (not read automatically)
+subsample_every: 1
+subsample_offset: 0

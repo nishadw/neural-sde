@@ -22,12 +22,25 @@ class OrdinalHead(eqx.Module):
 
     cut0: Array
     log_gaps: Array
+    log_scale: Array
     fixed: bool = eqx.field(static=True)
+    fixed_scale: float | None = eqx.field(static=True)
 
-    def __init__(self, fixed: bool = False, init_cut0: float = 2.0):
+    def __init__(self, fixed: bool = False, init_cut0: float = 2.0, link_scale: float = 0.5, learn_scale: bool = True):
+        """``link_scale`` = logistic width of the link in latent units: ``P(stage <= k) = sigmoid((theta_k - r)/s)``.
+        Small ``s`` means stages are a near-deterministic function of the latent (simulated hard labels); larger
+        ``s`` absorbs rater noise. Learnable unless ``learn_scale=False``."""
         self.cut0 = jnp.asarray(init_cut0, jnp.float32)
         self.log_gaps = jnp.zeros(N_STAGES - 2, jnp.float32)  # softplus(0) ~ 0.69; fixed mode ignores this
+        self.log_scale = jnp.log(jnp.asarray(link_scale, jnp.float32))
         self.fixed = fixed
+        self.fixed_scale = None if learn_scale else float(link_scale)
+
+    @property
+    def scale(self) -> Array:
+        if self.fixed_scale is not None:
+            return jnp.asarray(self.fixed_scale, jnp.float32)
+        return jnp.clip(jnp.exp(self.log_scale), 0.02, 3.0)
 
     def thresholds(self) -> Array:
         if self.fixed:
@@ -42,7 +55,7 @@ class OrdinalHead(eqx.Module):
     def log_probs(self, r: Array) -> Array:
         """``[..., N_STAGES]`` log P(stage = k | r) for ``r`` of any shape."""
         th = self.thresholds()
-        cdf = jax.nn.sigmoid(th - r[..., None])  # P(stage <= k), k = 1..K-1
+        cdf = jax.nn.sigmoid((th - r[..., None]) / self.scale)  # P(stage <= k), k = 1..K-1
         cdf = jnp.concatenate([jnp.zeros_like(r)[..., None], cdf, jnp.ones_like(r)[..., None]], axis=-1)
         p = jnp.clip(cdf[..., 1:] - cdf[..., :-1], 1e-6, 1.0)
         return jnp.log(p)

@@ -29,7 +29,7 @@ def test_first_passage_matches_inverse_gaussian():
     assert np.isfinite(taus).all()
     grid = np.linspace(1, 40, 80)
     emp = np.array([(taus <= t).mean() for t in grid])
-    ana = analytic_spoilage_cdf(grid, cfg.z0_mean, 0.473, 0.3)
+    ana = analytic_spoilage_cdf(grid, cfg.z0_mean, 0.473, cfg.calendar_sigma(0.473))
     assert np.max(np.abs(emp - ana)) < 0.06
 
 

@@ -1,117 +1,87 @@
 # Experiment plan
 
-The exact commands, in order. Everything before §3 runs on a laptop CPU; §3 onward is written for UMIACS
-but every command is also a plain `python scripts/...` call you can run anywhere.
+Every experiment is one Hydra command; `run_umiacs.sh` strings them together with SLURM dependencies.
+Everything before §2 runs on a laptop CPU. Results cells in the README stay TBD until the run exists.
 
-Novelty claims locked on 2026-10-20 (see `docs/literature_review.md`, §6):
+Claims (see `docs/research_plan.md`, `docs/theory.md`):
 
 | # | Claim | Experiment |
 |---|---|---|
-| 1 | Interval-censored first-passage likelihood for a latent neural SDE, with censored fruit kept | E1 (all models), E4 |
-| 2 | Shared ripening clock with an Arrhenius temperature factor; transfer to an unseen storage group | E3 |
-| 3 | How accuracy and calibration degrade with sparser visits | E2 |
-| 4 | How much each extra photo tightens the interval (single model via visible-prefix dropout) | E1 ablation |
-| 5 | Next-photo timing | deferred |
+| P1 | Exact interval-censored first-passage likelihood (PDE) vs the smoothed Monte Carlo estimator | E2 |
+| P2 | The censored log score is the proper metric; CRPS/MAE reported for comparability | all (metric `nll`) |
+| P3 | The Arrhenius clock is identifiable and transfers to an unseen storage temperature | E3 |
+| E1 | Beats the two published point-estimate models on the avocado data while keeping censored fruit | E1 |
+| E4 | Calibration and sharpness vs visit spacing and photo count | E4 |
+| E5 | Same model on PBC2 (clinical) and C-MAPSS (degradation) | E5 |
+| E6 | Multimodal photos + microwave (A2SL) | E6 |
 
 ## 0. One-time setup
 
 ```bash
 git clone https://github.com/nishadw/ripen && cd ripen
-python -m venv ~/envs/ripen && source ~/envs/ripen/bin/activate
-pip install -e ".[dev,features]"          # JAX CPU wheel; on a GPU node: pip install -U "jax[cuda12]"
-make test                                  # CPU suite incl. the fake-fruit recovery test (~2 min)
-make smoke                                 # every model, one batch
+bash run_umiacs.sh setup                 # venv at ~/envs/ripen, editable install, CPU tests + smoke
 ```
 
-Data (no new collection; public only):
+Data (no new collection; public or provided only):
 
 ```bash
-mkdir -p data/avocado && cd data/avocado
-# download https://data.mendeley.com/datasets/3xd9n945v8/1 (CC BY 4.0), unzip here, then:
-cd ../.. && python -c "from ripen.data.avocado import load_avocado; it=load_avocado('data/avocado'); print(len(it), 'fruit')"
+# Mendeley avocado set (CC BY 4.0): download https://data.mendeley.com/datasets/3xd9n945v8/1 and unzip into data/avocado
+# A2SL microwave drops: place the three raw folders under data/a2sl/ as in docs/data_a2sl.md, then
+python scripts/ingest_a2sl.py            # HEIC -> JPEG, manifests, scan caches (a few minutes)
+bash run_umiacs.sh data                  # PBC2 + C-MAPSS downloads, split files, ResNet-18 feature caches
 ```
 
-Expected: 478 fruit, three groups, 9–27 % right-censored per group.
+Expected: avocado 478 fruit (three groups, 9–27 % right-censored per group); A2SL 15 fruit (4 tracked for 7 visits);
+PBC2 312 patients; C-MAPSS FD001 100 engines.
 
 ## 1. Milestone 1 — fake fruit (no real data)
 
 ```bash
-make synthetic-quick                 # ~1 min: results/synthetic/recovery.{json,png}
-make synthetic                       # full: 600 items, 40 epochs
+make test                                # includes tests/test_recovery.py (rates, sigma, FPT CDF, Arrhenius E_a)
+make synthetic-quick                     # results/synthetic/recovery.{json,png}
 ```
 
-Pass criterion (also enforced by `tests/test_recovery.py`): per-group rates within 25 % of
-0.228 / 0.473 / 0.518, sigma within 50 % of 0.25, max |CDF error| < 0.15 on fresh T20 fruit.
+Pass criteria are in the tests: rates within 25 %, sigma within 50 %, max |CDF error| < 0.15, `E_a` within 15 %.
 
-## 2. Milestone 2 — avocado data organised, baseline scored
+## 2. On UMIACS
 
 ```bash
-make splits DATA=avocado             # results/splits/avocado_random_seed0.json + three LOGO files (committed)
-make features                        # ResNet-18 features -> data/features/avocado_resnet18.npz (GPU: slurm/extract_features.sh)
-python scripts/train.py model=stage_linear data=avocado
-python scripts/train.py model=direct_reg data=avocado
+export RIPEN_ACCOUNT=... RIPEN_PARTITION=... RIPEN_QOS=...     # from: sacctmgr show assoc user=$USER
+bash run_umiacs.sh all                   # submits synthetic, E1–E6 and the summary job with dependencies
+bash run_umiacs.sh e3                    # or any single stage
+bash run_umiacs.sh all --local           # same sequence, no SLURM (a workstation)
 ```
 
-Targets to beat (test split, uncensored instances): Xavier et al. 1.04 d MAE by sample;
-Hangud & Hangud 1.126 d fruit-weighted MAE. Our numbers go in `results/summary.md` via `make summary`.
+What each stage runs:
 
-## 3. E1 — every model, one protocol (UMIACS)
+| Stage | Jobs | Output |
+|---|---|---|
+| `synthetic` | `scripts/synthetic_recovery.py` at full scale | `results/synthetic/recovery.{json,png}` |
+| `e1` | all 8 models on `data=avocado`; latent SDE labels-only variant | `results/runs/<model>_avocado/` with `metrics_{test,val}.json`, `metrics_by_n_obs.json`, reliability and pred-vs-true figures |
+| `e2` | latent SDE with `model.event_likelihood=pde` vs `mc`, on avocado and synthetic | `results/runs/latent_sde_{avocado,synthetic}_{pde,mc}/` |
+| `e3` | leave one storage group out × {direct_reg, gru_d, latent_sde}; latent SDE with `clock=group` and `clock=fixed` | `results/runs/*_logo_*` |
+| `e4` | every-2/every-3-day training for gru_d / latent_ode / latent_sde; daily-trained models evaluated on sparser test visits | `results/runs/*_every{2,3}`, `metrics_test_every{2,3}.json` |
+| `e5` | six models on `data=pbc2` (horizon 180 months) and `data=cmapss` (horizon 40 inspections) | `results/runs/<model>_{pbc2,cmapss}/` |
+| `e6` | gru_d and latent SDE on `data=a2sl`; latent SDE with the feature decoder | `results/runs/*_a2sl*` |
+| `summary` | `scripts/summarize.py` after everything | `results/summary.md` |
 
-```bash
-source slurm/common.sh                              # edit RIPEN_ACCOUNT / RIPEN_PARTITION / RIPEN_QOS first
-sbatch --account=$RIPEN_ACCOUNT --partition=$RIPEN_PARTITION --qos=$RIPEN_QOS slurm/train_all_models.sh avocado
-# labels-only variant of the latent models (milestone "first model, using ripeness labels only"):
-sbatch ... slurm/train_all_models.sh avocado +experiment=labels_only
-```
+Metrics in every `metrics_*.json`: `nll` (proper censored log score, model selection), `mae`, `crps`,
+`crps_censored`, `coverage80`, `width80`, `cindex`, `ece`; overall, per storage group, and fruit-weighted.
 
-Each run writes `results/runs/<model>_avocado/{metrics_test.json, metrics_val.json, metrics_by_n_obs.json,
-reliability_test.png, pred_vs_true_test.png, history.csv, model.eqx, config.yaml}`.
-Metrics: MAE, CRPS, 80 % coverage and width, C-index, ECE; overall, per storage group, and fruit-weighted.
-`metrics_by_n_obs.json` is claim 4.
+Targets to beat on avocado (test split, uncensored instances): Xavier et al. 1.04 d MAE by sample;
+Hangud & Hangud 1.126 d fruit-weighted MAE.
 
-## 4. E2 — sampling frequency (claim 3)
+## 3. Reading the results
 
-```bash
-sbatch ... slurm/sampling_ablation.sh avocado        # gru_d, latent_ode, latent_sde x every 2 / 3 days
-# evaluate the daily-trained models on sparser test visits without retraining:
-python scripts/evaluate.py results/runs/latent_sde_avocado --every 2
-python scripts/evaluate.py results/runs/latent_sde_avocado --every 3
-```
+- E1 table: `results/summary.md` → README results table.
+- P1: compare `latent_sde_*_pde` vs `_mc` on `nll`, training time per epoch (`history.csv`), and the synthetic
+  rate/sigma recovery.
+- P3: `metrics_test.json` of the three LOGO folds for `latent_sde` (Arrhenius) vs `_clock_group` vs
+  `_clock_fixed`; the fitted `E_a` and `Q10` are in the model (`model.clock.ea`, `model.clock.q10()`).
+- E4: `metrics_by_n_obs.json` (photo count) and `metrics_test_every{2,3}.json` (visit spacing).
 
-## 5. E3 — unseen storage group (claim 2)
+## 4. Manual follow-ups
 
-```bash
-sbatch ... slurm/logo.sh avocado                     # 3 held-out groups x {direct_reg, gru_d, latent_sde}
-# clock ablation on the hardest fold:
-python scripts/train.py model=latent_sde data=avocado +experiment=logo splits.held_out=T10 model.clock=group
-python scripts/train.py model=latent_sde data=avocado +experiment=logo splits.held_out=T10 model.clock=fixed
-```
-
-Report the fitted activation energy and Q10 from the Arrhenius clock next to the 50 kJ/mol prior.
-
-## 6. E4 — gradient methods through the SDE solve
-
-```bash
-sbatch ... slurm/gradient_methods.sh avocado         # backprop | checkpoint | adjoint, same model and seed
-```
-
-Compare wall-clock per epoch, peak memory and final test metrics; cross-reference `experiments/adjoint_tradeoffs.py`.
-
-## 7. Multi-produce (when TriModal / FreshLab / Stevens data are in hand)
-
-```bash
-python scripts/export_manifest.py --root data/avocado --out data/stevens/manifest.csv   # schema check
-python scripts/train.py model=latent_sde data=stevens
-```
-
-Leave-one-produce-out uses the same `splits.mode=logo` machinery with `key="produce"` (see
-`ripen.data.splits.leave_one_group_out`).
-
-## 8. Tables and figures
-
-```bash
-make summary                         # results/summary.md
-```
-
-Every figure in the README is produced by a script in `scripts/` or `experiments/`; nothing is hand-edited.
-Cells marked TBD in the README stay TBD until the corresponding run exists.
+- Gradient-method sweep (backprop / checkpoint / adjoint) for the latent SDE: `make gradients` or
+  `slurm/gradient_methods.sh`; compare wall-clock, memory and `nll`.
+- Re-evaluate any finished run: `python scripts/evaluate.py results/runs/<run> [--every k] [--n-obs 1 3 5]`.

@@ -28,6 +28,8 @@ class Metrics:
     mae: float
     crps: float
     crps_censored: float
+    nll: float
+    nll_uncensored: float
     coverage80: float
     width80: float
     cindex: float
@@ -35,6 +37,34 @@ class Metrics:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def cdf_at(F: np.ndarray, x: np.ndarray) -> np.ndarray:
+    """``F`` evaluated at real ``x`` by linear interpolation on the integer grid; 0 below 0, ``F[H]`` above ``H``."""
+    H = F.shape[1] - 1
+    xc = np.clip(x, 0.0, H)
+    i0 = np.floor(xc).astype(int)
+    i1 = np.minimum(i0 + 1, H)
+    w = xc - i0
+    rows = np.arange(F.shape[0])
+    val = (1 - w) * F[rows, i0] + w * F[rows, i1]
+    return np.where(x < 0, 0.0, val)
+
+
+def censored_log_score(F: np.ndarray, lo: np.ndarray, hi: np.ndarray) -> np.ndarray:
+    """Negative log-likelihood of the censoring observation under ``F`` — the strictly proper score for
+    interval- and right-censored data under independent monitoring (Rindt et al. 2022; Yanagisawa & Akiyama 2026).
+
+    Uncensored: ``-log[F(hi) - F(lo)]`` (an interval of zero width is widened to the day bin ending at ``hi``);
+    right-censored: ``-log[1 - F(lo)]``. Probabilities are floored at 1e-6.
+    """
+    hi = np.where(hi >= 1e5, np.inf, hi)  # INF_SENTINEL from a Batch counts as right-censored
+    unc = ~np.isinf(hi)
+    lo_eff = np.where(unc & (hi - lo < 1e-9), hi - 1.0, lo)
+    p_int = cdf_at(F, hi) - cdf_at(F, lo_eff)
+    p_cens = 1.0 - cdf_at(F, lo)
+    p = np.where(unc, p_int, p_cens)
+    return -np.log(np.clip(p, 1e-6, 1.0))
 
 
 def quantile_from_cdf(F: np.ndarray, q: float) -> np.ndarray:
@@ -64,7 +94,7 @@ def reliability_curve(F: np.ndarray, lo: np.ndarray, hi: np.ndarray, horizons=(1
     for h in horizons:
         if h > H:
             continue
-        known = ~np.isinf(hi) | (lo >= h)
+        known = (lo >= h) | (~np.isinf(hi) & (hi <= h))  # outcome by h is known only outside (lo, hi)
         y = (hi <= h).astype(float)
         preds.append(F[known, h])
         obs.append(y[known])
@@ -99,12 +129,15 @@ def compute_metrics(F: np.ndarray, lo: np.ndarray, hi: np.ndarray, weights: np.n
     crps_c = np.sum(np.where(h[None, :] < lo[:, None], F**2, 0.0), axis=1)
     crps = wmean(crps_u, unc)
     crps_cens = wmean(np.where(unc, crps_u, crps_c), np.ones(N, bool))
+    ls = censored_log_score(F, lo, hi)
+    nll = wmean(ls, np.ones(N, bool))
+    nll_unc = wmean(ls, unc)
     cover = wmean(((q10 <= hi) & (hi <= q90)).astype(float), unc)
     width = wmean(q90 - q10, np.ones(N, bool))
     time = np.where(unc, hi, lo)
     cidx = harrell_cindex(-med, time, unc)
     _, _, _, ece = reliability_curve(F, lo, hi)
-    return Metrics(int(N), int(unc.sum()), mae, crps, crps_cens, cover, width, cidx, ece)
+    return Metrics(int(N), int(unc.sum()), mae, crps, crps_cens, nll, nll_unc, cover, width, cidx, ece)
 
 
 def summarize_by_group(F, lo, hi, groups: np.ndarray, group_names, item_ids: np.ndarray | None = None) -> dict:

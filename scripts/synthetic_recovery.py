@@ -69,7 +69,9 @@ def main() -> None:
     F = np.asarray(model.predict_cdf(batch, jax.random.PRNGKey(7))).mean(0)
     t = np.arange(F.shape[0], dtype=float)
     z0s = np.array([it.meta["z0"] for it in fresh])
-    cdf_true = np.mean([analytic_spoilage_cdf(t, z0, scfg.rates["T20"], scfg.sigma) for z0 in z0s], axis=0)
+    cdf_true = np.mean(
+        [analytic_spoilage_cdf(t, z0, scfg.rates["T20"], scfg.calendar_sigma(scfg.rates["T20"])) for z0 in z0s], axis=0
+    )
     rep = {
         "rates_true": scfg.rates,
         "rates_fit": rates_fit,

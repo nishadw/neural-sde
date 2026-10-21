@@ -7,8 +7,15 @@ of Alabama** (title slide of every deck in `avocado_jun2023/03_presentations/`).
 experiments: an antenna array around the fruit, a reconstruction (delay-and-sum beamforming; files are
 labelled `DMAS` — delay-multiply-and-sum — and `CDAS` — coherent delay-and-sum — with a reconstruction
 parameter `RP`) that yields a cross-sectional intensity map of the fruit's interior, repeated at several
-rotation angles. Photos accompany every scan. **No ripeness, firmness or spoilage label was recorded**; the only
-ground truth is the day an avocado was cut open and the cut photo.
+rotation angles. Photos accompany every scan. **No label file came with the data**, but the avocado set is the one published in
+Wu, Choffin, Kong, Lee, Sun & Jeong, *Noninvasive Microwave Imaging and Machine Learning to Assess Ripeness of
+Avocados*, IEEE J. Microwaves 6(1):273–284, 2026 (doi:10.1109/JMW.2025.3636171, CC BY 4.0), whose Fig. 4 shows
+all 210 scan images with their class: **every image of a given study day has the same class** — Day 1 → 0
+unripe, Day 3 → 1 barely ripe, Day 5 → 2 ripe, Day 7 → 3 almost overripe, Days 9–13 → 4 overripe (30 images per
+class for 0–3, 90 for class 4 = 5 fruit × 6 angles per visit). The classes were validated by skin lightness
+(colorimeter, L\*), a penetrometer on fruit 12–15, and the fruit cut open each day. The loader applies this
+rule (`labels="jmw2026"`), mapping classes 0–4 to stages 1–5 with stage 5 = end of shelf life, so every tracked
+fruit's spoilage interval is (day 7, day 9]. The other two sets stay unlabelled.
 
 Raw files live under `data/a2sl/` (never committed, ~0.5 GB). `python scripts/ingest_a2sl.py` converts the
 HEIC photos to 1024-px JPEG and writes the manifests under `data/manifests/` (committed) and two `.npz` scan
@@ -49,15 +56,17 @@ dimensions and a **ripeness note from the grower**: "Ripe", "1.5 weeks out", "1.
 | Use | avocado_jun2023 | pilot_may2023 | watermelon_2022 |
 |---|---|---|---|
 | Trajectory model of a fruit over time | **yes** (4 fruit × 7 visits) | yes (6 × up to 13) | no (one visit) |
-| Spoilage / stage supervision | **no** — nothing labelled | no | weak: grower's weeks-to-ripe |
+| Spoilage / stage supervision | day-determined classes from the published paper (4 tracked fruit → interval (7, 9]) | no | weak: grower's weeks-to-ripe |
 | Second sensing modality (microwave) | **yes**, numeric | PNG renders only | yes, numeric, 5 frequencies |
 | Destructive ground truth | cut photos (7) | cut photos (15) | — |
 | Storage temperature | not logged | not logged | — |
 
-So in `ripen` these sets are loaded with `stage=None` and right-censored at the last visit: they exercise the
-**generative** side of the latent SDE (the feature decoder, `decode_features: true`) and the multimodal
-encoder, and they are the demonstration that the same model consumes photos *and* microwave grids. The
-spoilage supervision still comes from the Mendeley avocado set (478 fruit, labelled, three temperatures).
+So in `ripen` the June avocados carry stages and a spoilage interval; because the labels are a function of
+the day alone, the event time has no variance across fruit and the set is a **multimodal case study**, not a
+benchmark: it exercises the microwave + photo encoder and the generative side of the latent SDE (the feature
+decoder, `decode_features: true`), and `labels: null` turns it back into unlabelled, right-censored
+trajectories. The pilot and watermelon sets stay unlabelled. The spoilage benchmark remains the Mendeley set
+(478 fruit, three temperatures).
 
 Possible label sources if they are ever wanted: rating the 22 cut photos for ripeness by eye, or asking A2SL
 for their firmness notes. Both are outside the "no new data collection" rule for now.

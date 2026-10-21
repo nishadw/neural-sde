@@ -52,7 +52,9 @@ def load_manifest(path: str | Path, features: dict[str, np.ndarray] | None = Non
             if features is not None:
                 vecs = [features[Path(r.image_path).name] for r in rs if Path(r.image_path).name in features]
                 feats = np.stack(vecs).astype(np.float32) if vecs else None
-            visits.append(Visit(t=t - t0, stage=stage, image_paths=tuple(str(r.image_path) for r in rs), features=feats))
+            visits.append(
+                Visit(t=t - t0, stage=stage, image_paths=tuple(str(r.image_path) for r in rs), features=feats)
+            )
             if spoiled:
                 hi = t - t0
                 break
@@ -62,7 +64,9 @@ def load_manifest(path: str | Path, features: dict[str, np.ndarray] | None = Non
             Item(
                 item_id=str(item_id),
                 produce=str(first["produce"]),
-                storage=str(first["storage"]) if "storage" in df.columns and not pd.isna(first["storage"]) else "unknown",
+                storage=str(first["storage"])
+                if "storage" in df.columns and not pd.isna(first["storage"])
+                else "unknown",
                 temp_c=float(first["temp_c"]) if "temp_c" in df.columns and not pd.isna(first["temp_c"]) else math.nan,
                 rh=float(first["rh"]) if "rh" in df.columns and not pd.isna(first["rh"]) else math.nan,
                 visits=visits,
