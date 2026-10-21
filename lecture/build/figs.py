@@ -249,3 +249,24 @@ eq("v3_ratio",  r"$\frac{\mathrm{sd}(\tau_{10})}{\mathrm{sd}(\tau_{20})} = \left
 print("v3 done", round(Ea/1000, 1))
 eq("v3_ig_a", r"$dX = v\,dt + \sigma\,dW,\qquad \tau = \inf\{t: X_t = L\}$", 20)
 eq("v3_ig_b", r"$\mathbb{E}\,\tau = \frac{L}{v},\qquad \mathrm{sd}(\tau) = \sqrt{L\sigma^2 / v^3}$", 20)
+
+# =====================================================================
+# v4: title-slide graphic (sample paths of a drifted SDE, no axes)
+# =====================================================================
+rng = np.random.default_rng(7)
+n, steps = 40, 400
+t = np.linspace(0, 1, steps + 1)
+dW = rng.normal(0, np.sqrt(1 / steps), (n, steps))
+X = np.zeros((n, steps + 1))
+for k in range(steps):
+    X[:, k + 1] = X[:, k] + 1.2 / steps + 0.45 * dW[:, k]
+fig, ax = plt.subplots(figsize=(6.0, 4.2), dpi=300)
+mid = int(np.argmin(np.abs(X - X.mean(0)).mean(1)))   # path closest to the mean
+for i in range(n):
+    if i != mid:
+        ax.plot(t, X[i], color="#C9CED6", lw=0.9, alpha=0.9)
+ax.plot(t, X[mid], color=RED, lw=2.2)
+ax.axis("off")
+fig.subplots_adjust(0, 0, 1, 1)
+fig.savefig(OUT + "title_paths.png", transparent=True); plt.close()
+print("v4 done")

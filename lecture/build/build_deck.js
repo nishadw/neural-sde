@@ -1,4 +1,4 @@
-// Neural SDEs lecture (CMSC 838B) — v3: light theme, running example from Xavier et al. (Foods 2024).
+// Neural SDEs lecture (CMSC 838B) — v4: 25-minute slot, light theme, running example from Xavier et al. (Foods 2024).
 // Build:  python figs.py && node build_deck.js   (optional: APPLY_THEME=/path/to/apply_theme.js)
 // Paper figures (img/p_*.jpg) are from Xavier, Rodrigues & Silva, Foods 13(8):1150 (2024), CC BY 3.0.
 const pptxgen = require("pptxgenjs");
@@ -34,6 +34,8 @@ pres.defineSlideMaster({
   ],
   slideNumber: { x: 9.2, y: 5.28, w: 0.4, h: 0.22, fontSize: 9, color: MUTED, align: "right" },
 });
+
+pres.defineSlideMaster({ title: "TITLE", background: { color: "FFFFFF" }, objects: [] });
 
 // ---------------- helpers ----------------
 function content(section, kicker, title, takeaway) {
@@ -94,19 +96,20 @@ const notes = (s, lines) => s.addNotes(lines.join("\n"));
 // ================= 1. TITLE =================
 pres.addSection({ title: "Opening" });
 {
-  const s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "Opening" });
-  txt(s, "CMSC 838B  ·  STUDENT LECTURE  ·  FALL 2026", 0.5, 0.55, 9, 0.28, { fontSize: 10, bold: true, color: MUTED, charSpacing: 1.5 });
-  txt(s, "Neural SDEs", 0.5, 0.9, 9, 0.7, { fontSize: 36, bold: true, fontFace: "Arial" });
-  txt(s, "Differentiating through stochastic dynamics", 0.5, 1.6, 9, 0.4, { fontSize: 18, color: "374151" });
-  txt(s, [M("Running example: post-harvest ripening of 'Hass' avocado  ·  "), M(CREDIT, { italic: true })], 0.5, 2.05, 9, 0.3, { fontSize: 12 });
-  txt(s, "Nishad Wajge  ·  University of Maryland", 0.5, 2.5, 9, 0.3, { fontSize: 12.5, bold: true });
-  img(s, "p_fig1_stages.jpg", 0.5, 3.0, { w: 9 });
-  credit(s, "Ripening stages 1–5. Fig. 1, " + CREDIT + ", CC BY 3.0.", 0.5, 5.02, 8);
+  const s = pres.addSlide({ masterName: "TITLE", sectionTitle: "Opening" });
+  img(s, "title_paths.png", 5.3, 1.35, { w: 4.2 });
+  txt(s, "Neural SDEs", 0.6, 1.55, 6, 0.85, { fontSize: 44, bold: true, fontFace: "Arial" });
+  s.addShape(pres.shapes.RECTANGLE, { x: 0.62, y: 2.5, w: 0.7, h: 0.05, fill: { color: RED }, line: { color: RED, width: 0 } });
+  txt(s, "Differentiating through stochastic dynamics", 0.6, 2.7, 6, 0.4, { fontSize: 18, color: "374151" });
+  txt(s, "Nishad Wajge", 0.6, 4.25, 6, 0.3, { fontSize: 14, bold: true });
+  txt(s, "CMSC 838B  ·  University of Maryland  ·  Fall 2026", 0.6, 4.55, 6, 0.3, { fontSize: 11.5, color: MUTED });
   notes(s, [
     "[0:00 – 0:20]",
-    "PLAN: ~23 min talk + 5 min discussion. SKIP-IF-SHORT: slides 7 and 20. Appendix (A1–A9) is not presented; jump there only if asked.",
-    "• Topic: gradients through stochastic differential equations, and how to train models built from them.",
-    "• Running example from a real food-science paper: Xavier et al., Foods 2024. Photos of avocados ripening, stages 1 to 5 shown here.",
+    "PLAN: 25:00 total = 20:00 talk + 5:00 discussion. If behind at slide 7 or 19, skip them.",
+    "CHECKPOINTS: slide 9 by 6:00 · slide 14 by 12:15 · slide 20 by 18:30 · discussion by 20:00.",
+    "Appendix (A1–A10) is not presented; jump there only if asked.",
+    "• Hi, I'm Nishad. Today: neural SDEs, and how to take gradients through randomness.",
+    "• One running example the whole way: when does an avocado go bad?",
   ]);
 }
 
@@ -117,7 +120,7 @@ pres.addSection({ title: "Opening" });
     ["Group", "Storage", "n", "Stage 1→5 (fit)"],
     ["T10", "10 °C, 85% RH", "192", "17.6 d"],
     ["T20", "20 °C, 85% RH", "143", "8.5 d"],
-    ["Tamb", "15.8–21.7 °C (mean 18.7), RH not logged", "143", "7.7 d"],
+    ["Tamb", "15.8–21.7 °C, RH not logged", "143", "7.7 d"],
   ], 0.5, 1.4, [0.8, 2.6, 0.5, 1.15], { rowH: 0.36 });
   table(s, [
     ["Images", "Labels", "Split"],
@@ -128,7 +131,7 @@ pres.addSection({ title: "Opening" });
   txt(s, [M("Shelf life:  "), B("τ = first day at stage 5")], 5.5, 3.25, 4.0, 0.3, { fontSize: 13 });
   credit(s, "Stage-1→5 durations computed from the paper's Table 4 slopes (4 × |α|).", 0.5, 4.45, 6);
   notes(s, [
-    "[0:20 – 1:20]",
+    "[0:20 – 1:10]",
     "• Data: Xavier, Rodrigues and Silva, Foods 2024, open access. 478 Hass avocados photographed daily on both sides until overripe.",
     "• Three groups: 10 °C, 20 °C (both 85% humidity), and room temperature, which drifted between 15.8 and 21.7 °C with humidity not logged.",
     "• Labels: a 5-stage ripening index, refined to 10 stages. End of shelf life is reaching stage 5 (stage 9 on the 10-stage scale).",
@@ -166,19 +169,19 @@ pres.addSection({ title: "Opening" });
   ], 5.3, 2.38, [1.2, 1.4, 1.6], { fontSize: 11 });
   credit(s, "Tables 3 and 6, " + CREDIT + ". 'Predicted' = by sample.", 0.5, 4.45, 8);
   notes(s, [
-    "[1:20 – 2:20]",
+    "[1:10 – 2:00]",
     "• Their method: a CNN with transfer learning classifies the stage from one photo; a per-group linear regression turns the stage into days left.",
     "• Left: ~78% exact on 5 stages, >99% within one stage. 10 stages: ~60% exact, ~93% within one.",
     "• Right: mean absolute error in shelf life. Even with the TRUE stage label ('true stage' column), error is 1.7 days at 10 °C. So most of the error isn't the classifier; it's the stage → days map.",
-    "• Note the paper's headline 88.8% is accuracy on the best side of each fruit; the table shows per-picture averages.",
     "",
+    "IF ASKED — the abstract says 88.8%? That's accuracy on the best side of each fruit; the table shows per-picture averages.",
     "IF ASKED — what's 'by sample'? Each fruit has two photos (sides); 'by sample' uses the better/combined side, which improves accuracy because one side can have marks.",
   ]);
 }
 
 // ================= 4. A DRIFT =================
 {
-  const s = content("Opening", "RUNNING EXAMPLE", "Their Shelf-Life Model, Read as a Constant-Drift ODE", "The regression line is the drift; the error bars are the spread it leaves out.");
+  const s = content("Opening", "RUNNING EXAMPLE", "Their Shelf-Life Model, Read as a Constant-Drift ODE", "Regression line = drift; error bars = the spread it leaves out.");
   img(s, "p_fig6a_T10.jpg", 0.5, 1.3, { w: 4.7 });
   credit(s, "Fig. 6a (T10, cropped from Fig. 6): mean ± sd days left per stage. " + CREDIT + ", CC BY 3.0.", 0.5, 4.27, 4.7);
   img(s, "v3_drift.png", 5.45, 1.42, { w: 4.05 });
@@ -189,12 +192,12 @@ pres.addSection({ title: "Opening" });
     ["Tamb", "−1.929", "0.518", "0.959"],
   ], 5.45, 2.15, [0.9, 1.15, 1.1, 0.9], { fontSize: 11 });
   credit(s, "α: Table 4 of the paper. v in stages / day (derived).", 5.45, 3.5, 4.05);
-  txt(s, [M("Missing:  "), B("dW"), M(" (spread around the line), memory of past images, uncertainty in τ.")], 5.45, 3.8, 4.05, 0.6, { fontSize: 11.5 });
+  txt(s, [M("Missing:  "), B("dW"), M(", memory of past images, uncertainty in τ.")], 5.45, 3.8, 4.05, 0.3, { fontSize: 11.5 });
   notes(s, [
-    "[2:20 – 3:20]",
+    "[2:00 – 2:50]",
     "• Their linear regression, Days Left = α(stage − 5), can be read as a constant-velocity ODE in stage: ds/dt ≈ v with v = 1/|α|.",
     "• Rates: 0.23 stages/day at 10 °C, 0.47 at 20 °C, 0.52 at room temperature. 20 °C ripens ~2× faster than 10 °C, as the paper reports.",
-    "• Left plot (their Fig. 6a, T10): the error bars are standard deviations of days left at each stage, often ±2–3 days. A deterministic ODE can't represent that spread. That's the diffusion term.",
+    "• Left plot (their Fig. 6a, T10): the error bars are standard deviations of days left at each stage, often ±2–3 days. A deterministic ODE can't represent that spread; a diffusion term can.",
     "",
     "IF ASKED — is that inversion exact? No: regressing days on stage and inverting isn't the same as regressing stage on days (slopes differ by a factor R², ~4% here); stage is ordinal; and their fit is pinned at stage 5. Close enough to read off rates.",
     "IF ASKED — R² ≈ 0.96 looks great; why change it? R² measures fit of the mean; the decision (sell/discount by Friday) needs the distribution around the mean, which R² doesn't capture.",
@@ -203,26 +206,27 @@ pres.addSection({ title: "Opening" });
 
 // ================= 5. RESIDUAL IS STOCHASTIC =================
 {
-  const s = content("Opening", "RUNNING EXAMPLE", "A Point Estimate Hides Days of Spread", "Stage quantization explains most of the error; the excess is largest at 10 °C, the longest horizon.");
+  const s = content("Opening", "RUNNING EXAMPLE", "A Point Estimate Hides Days of Spread", "Quantization explains most error; the excess peaks at 10 °C, the longest horizon.");
   img(s, "p_fig11_T10_kde.jpg", 0.5, 1.3, { w: 5.2 });
   credit(s, "Fig. 11 (T10, cropped): shelf-life error vs. ripening index; left attributed labels, right predicted. " + CREDIT + ", CC BY 3.0.", 0.5, 3.75, 5.2);
   table(s, [
-    ["Group", "|α| (d)", "floor |α|/4", "MAE", "floor / MAE"],
+    ["Group", "|α| (d)", "floor |α|/4", "MAE", "share"],
     ["T10", "4.39", "1.10", R("1.70"), R("65%")],
     ["T20", "2.12", "0.53", "0.73", "72%"],
     ["Tamb", "1.93", "0.48", "0.53", "91%"],
   ], 5.95, 1.4, [0.7, 0.7, 0.85, 0.6, 0.75], { fontSize: 10.5 });
-  credit(s, "MAE in days with attributed (human) labels, Table 6. Floor = MAE from position within a stage alone (uniform, width |α|).", 5.95, 2.78, 3.6);
-  txt(s, [M("Errors up to "), B("~6 days"), M(" at stages 1–4 (T10); the paper reports only the point.")], 5.95, 3.45, 3.6, 0.6, { fontSize: 11.5 });
+  credit(s, "MAE in days, attributed labels (Table 6). Floor: uniform position within a stage.", 5.95, 2.78, 3.6);
+  txt(s, [M("Errors reach "), B("~6 days"), M(" at stages 1–4 (T10).")], 5.95, 3.45, 3.6, 0.3, { fontSize: 11.5 });
   notes(s, [
-    "[3:20 – 4:20]",
-    "• Their Fig. 11, 10 °C group: density of shelf-life error against ripening index. Left uses the human labels, right the model's predictions. Average error ≈ 2 days at stages 1–4, tails to ~6 days; zero at stage 5 by definition.",
-    "• Table: part of this is unavoidable. A stage lasts |α| days, and one label can't tell day 1 of a stage from day 4. Uniform position within a stage alone gives MAE = |α|/4: 65% of the error at 10 °C, 91% at room temperature.",
-    "• The excess (fruit-to-fruit rate variation, labeling noise, within-fruit randomness) is what the model has to represent as a distribution. It's largest at 10 °C, where the horizon is longest.",
-    "• Slide 13 compares the groups with a first-passage calculation.",
+    "[2:50 – 3:45]",
+    "• Fig. 11, 10 °C group: shelf-life error by stage. Left human labels, right model predictions.",
+    "• Average error ≈ 2 days at stages 1–4, tails to ~6 days.",
+    "• Part is unavoidable: one label can't tell day 1 of a stage from day 4. That floor, |α|/4, is 65% of the error at 10 °C, 91% at room temperature.",
+    "• The rest is what a model must represent as a distribution. It's largest at 10 °C, the longest horizon.",
     "",
-    "IF ASKED — couldn't this just be label noise? Partly: the 'attributed' labels are human, so they carry labeling noise too. Separating diffusion (sd ∝ √horizon) from fruit-to-fruit rate variation (sd ∝ horizon) needs the per-stage sds in Fig. 6; this slide doesn't settle it.",
+    "IF ASKED — couldn't this just be label noise? Partly: the 'attributed' labels are human. Separating diffusion (sd ∝ √horizon) from fruit-to-fruit rate variation (sd ∝ horizon) needs the per-stage sds in Fig. 6.",
     "IF ASKED — why |α|/4? The MAE of a uniform distribution of width w about its center is w/4.",
+    "IF ASKED — why zero at stage 5? Days left is 0 by definition once the fruit is in stage 5.",
   ]);
 }
 
@@ -239,11 +243,12 @@ pres.addSection({ title: "Opening" });
     ["Within-fruit noise (sd ∝ √h)", N, N, N, Y],
   ], 0.5, 1.4, [3.0, 1.6, 1.45, 1.4, 1.55], { rowH: 0.42, fontSize: 12 });
   notes(s, [
-    "[4:20 – 5:00]",
+    "[3:45 – 4:20]",
     "• The paper's model uses one image and outputs a point. Rows: what we want.",
-    "• A sequence model (GRU/Transformer with time-gap features and a hazard head) gets partway; a latent ODE handles irregular time and can spread through an uncertain initial state or per-fruit rate (sd ∝ horizon), but that uncertainty collapses as images accumulate. It has no noise that keeps arriving.",
+    "• A sequence model gets partway. A latent ODE handles irregular time, but has no noise that keeps arriving.",
     "• Latent SDE: all five by construction; its diffusion adds variance that grows like √h along the way.",
     "",
+    "IF ASKED — can't a latent ODE spread? Yes, via an uncertain initial state or per-fruit rate (sd ∝ horizon), but that collapses as images accumulate.",
     "IF ASKED — 'partial' for the paper on temperature: they fit a separate slope per storage group; that's temperature-dependent but not a function of temperature (can't interpolate to 15 °C).",
   ]);
 }
@@ -261,7 +266,7 @@ pres.addSection({ title: "Part 1: Differentiating solvers" });
   img(s, "v2_node_food.png", 0.5, 3.88, { h: 0.48 });
   img(s, "resnet_vs_ode.png", 4.8, 1.3, { w: 4.7, h: 3.2, center: true });
   notes(s, [
-    "[5:00 – 5:45] — SKIP-IF-SHORT (most of the room knows this).",
+    "[4:20 – 5:00] — SKIP-IF-SHORT (most of the room knows this).",
     "• Residual block h + f(h) = one explicit Euler step. Δt → 0 gives dh/dt = f_θ(h, t); the solver chooses the steps.",
     "• Bottom: in the avocado setting, z(0) is an encoding of the first photo, f evolves it under storage condition c. The paper's model is the special case f = constant rate v_g in stage space.",
     "",
@@ -277,11 +282,11 @@ pres.addSection({ title: "Part 1: Differentiating solvers" });
     ["Method", "Memory (N steps)", "Extra compute", "Gradient", "Diffrax"],
     ["Backprop through steps", "O(N)", "≈ 1 backward pass", "exact (discrete)", mono("RecursiveCheckpointAdjoint(checkpoints=N)")],
     ["Binomial checkpointing", "O(log N)", "O(N log N)", "exact (discrete)", mono("RecursiveCheckpointAdjoint()")],
-    [{ text: "Continuous adjoint", options: { color: RED, bold: true } }, "O(1) in N", "backward solve, dim 2d + p", R("approximate", { bold: false }), mono("BacksolveAdjoint()")],
+    [{ text: "Continuous adjoint", options: { color: RED, bold: true } }, "O(1) in N", "backward solve (2d + p)", R("approximate", { bold: false }), mono("BacksolveAdjoint()")],
   ], 0.5, 1.4, [1.9, 1.35, 1.75, 1.45, 2.55], { rowH: 0.55, fontSize: 11.5 });
   txt(s, [M("d = state dim, p = #params. Rows 1–2: discretize-then-differentiate. Row 3: differentiate-then-discretize.")], 0.5, 3.75, 9, 0.3, { fontSize: 10.5 });
   notes(s, [
-    "[5:45 – 6:45]",
+    "[5:00 – 5:55]",
     "• Row 1: treat the solver as code and backprop. Exact gradient of the computed solution; stores every step.",
     "• Row 2: Griewank's binomial checkpointing (revolve): O(log N) checkpoints, O(N log N) recomputation, still exact.",
     "• Row 3: derive the continuous gradient as a backward ODE (next slide) and solve it. Memory independent of N, but the backward re-solve doesn't retrace the forward discrete path, so the gradient is approximate.",
@@ -309,7 +314,7 @@ pres.addSection({ title: "Part 1: Differentiating solvers" });
   txt(s, "backward: (z, a, a_θ) jointly", X0, 2.6, 3.1, 0.3, { fontSize: 10.5, color: RED, bold: true });
   table(s, [["Term", "Primitive"], ["aᵀ ∂f/∂z", "VJP of f in z"], ["aᵀ ∂f/∂θ", "VJP of f in θ"]], 6.2, 3.15, [1.5, 1.8], { fontSize: 11 });
   notes(s, [
-    "[6:45 – 8:30] — core slide.",
+    "[5:55 – 7:25] — core slide.",
     "• a(t) = ∂L/∂z(t): sensitivity of the loss to the state at time t. Linear ODE backward from a(T) = ∂L/∂z(T).",
     "• a_θ starts at 0 at T; its value at 0 is dL/dθ.",
     "• z is re-integrated backward rather than stored: source of O(1) memory and of the approximation.",
@@ -334,7 +339,7 @@ pres.addSection({ title: "Part 2: Stochastic dynamics" });
     0.5, 3.83, [2.2, 1.6, 0.9, 0.9], { fontSize: 10, rowH: 0.22 });
   txt(s, [M("Full table: A7")], 6.3, 4.4, 3, 0.25, { fontSize: 10 });
   notes(s, [
-    "[8:30 – 10:15]",
+    "[7:25 – 8:55]",
     "• An SDE is shorthand for the integral equation; the dW integral is Itô (left endpoint).",
     "• Increments are independent N(0, Δt); (dW)² = dt is why stochastic calculus differs.",
     "• Itô's lemma: the extra ½ f″ σ² dt term. Example: d log S picks up −½σ².",
@@ -366,7 +371,7 @@ pres.addSection({ title: "Part 2: Stochastic dynamics" });
   img(s, "v2_tau.png", 5.3, 3.3, { w: 4.2, h: 0.4 });
   table(s, [["Paper", "Here"], ["ŝ from one image", "filtered Z_t from all images"], ["Days Left = α_g(ŝ − 5)", "P(τ ≤ t* | images up to day k, c)"]], 0.5, 3.82, [3.0, 3.6], { fontSize: 10.5, rowH: 0.27 });
   notes(s, [
-    "[10:15 – 11:45]",
+    "[8:55 – 10:15]",
     "• Encode each photo; Z_t evolves as an SDE between photos; an ordinal head maps Z to stage probabilities; shelf life τ is when the ripeness score crosses the stage-4/5 cut.",
     "• Drift: Arrhenius factor κ(c) times a neural rate. E_a activation energy, R gas constant, T in kelvin. Diffusion σ_θ: variability across fruit and storage.",
     "• Ordinal head: cumulative-logit model, P(y ≤ k) = sigmoid(c_k − q(Z)), cut points c_k ordered. b = c_4 defines 'end of shelf life'.",
@@ -392,7 +397,7 @@ pres.addSection({ title: "Part 2: Stochastic dynamics" });
   ], 5.6, 2.15, [2.4, 1.5], { fontSize: 11 });
   credit(s, "Rates from the paper's Table 4; fit is ours (A5).", 5.6, 4.15, 3.9);
   notes(s, [
-    "[11:45 – 12:45]",
+    "[10:15 – 11:10]",
     "• Using their per-group slopes: rates 0.228 (10 °C) and 0.473 (20 °C) stages/day. Q10 ≈ 2.07, so Eₐ ≈ 50 kJ/mol, a plausible enzymatic value.",
     "• Predict room temperature (mean 18.7 °C): 2.32 days per stage. Observed: 1.93. Ambient fruit ripened ~20% faster than temperature alone explains; you'd need 21.3 °C, near the top of the recorded range.",
     "• Likely culprits: humidity wasn't controlled in Tamb, and temperature fluctuated. Point: a physics prior gets you most of the way; a learned residual absorbs what it misses. That's why the drift is κ(c) × network.",
@@ -404,7 +409,7 @@ pres.addSection({ title: "Part 2: Stochastic dynamics" });
 
 // ================= 13. FIRST-PASSAGE CHECK =================
 {
-  const s = content("Part 2: Stochastic dynamics", "PART 2  ·  A QUICK TEST", "Do the Paper's Errors Have a Drift–Diffusion Shape?", "T10/T20 = 2.33 exceeds quantization alone (2.07): extra spread at 10 °C. Three numbers can't pin σ(T).");
+  const s = content("Part 2: Stochastic dynamics", "PART 2  ·  A QUICK TEST", "Do the Paper's Errors Have a Drift–Diffusion Shape?", "Observed 2.33 > 2.07 from quantization alone: extra spread at 10 °C.");
   label(s, "first passage of drifted Brownian motion (A4)", 0.5, 1.38, 5);
   img(s, "v3_ig_a.png", 0.5, 1.64, { h: 0.3 });
   img(s, "v3_ig_b.png", 0.5, 2.0, { h: 0.36 });
@@ -413,15 +418,15 @@ pres.addSection({ title: "Part 2: Stochastic dynamics" });
   credit(s, "Observed = MAE ratios with attributed labels (paper, Table 6).", 0.5, 4.25, 4.6);
   img(s, "v3_fpt_ratio.png", 5.0, 1.3, { w: 4.5, h: 3.3, center: true });
   notes(s, [
-    "[12:45 – 14:00]",
-    "• Back-of-envelope: if stage drifts at rate v with noise σ, the time to cover distance L is inverse-Gaussian with mean L/v and sd √(Lσ²/v³).",
-    "• Two hypotheses. σ fixed across temperatures: error ratio (v₂₀/v₁₀)^{3/2} ≈ 3.0 for T10/T20. Temperature rescales the whole clock (σ² ∝ v): ratio v₂₀/v₁₀ ≈ 2.1.",
-    "• Confound: stage quantization alone (slide 5's floor, |α|/4) also scales as 1/v, so it predicts the same 2.07.",
-    "• Observed (MAE as a proxy for sd): 2.33. Above 2.07, so there is extra spread at 10 °C beyond quantization; below 3.0. Three numbers can't separate σ-scaling from quantization, so I read this as 'consistent with drift + diffusion', not a fit of σ(T).",
-    "• Tamb comes out lower than either. Consistent with Tamb being a different regime (humidity, fluctuating temperature), which slide 12 also showed.",
-    "• Caveat: MAE of a stage-based estimate, not the sd of τ, and ignores classification noise. It's a sanity check that a drift–diffusion model is the right shape, not a fit.",
+    "[11:10 – 12:15]",
+    "• Back-of-envelope: stage drifts at rate v with noise σ. Time to cover distance L is inverse Gaussian: mean L/v, sd √(Lσ²/v³).",
+    "• If σ is the same at all temperatures, the T10/T20 error ratio is (v₂₀/v₁₀)^{3/2} ≈ 3.0. If temperature speeds up the whole clock (σ² ∝ v), it's v₂₀/v₁₀ ≈ 2.1.",
+    "• Careful: quantization alone also gives 2.07.",
+    "• Observed: 2.33. Above quantization, so extra spread at 10 °C. Three numbers can't pin σ(T); it's a shape check, not a fit.",
     "",
-    "IF ASKED — why MAE ∝ sd? For a fixed distribution family, MAE is a constant multiple of sd (0.8 for Gaussian). That assumes the coefficient of variation is small; under fixed σ the inverse-Gaussian CV ∝ v^(−1/2) differs 1.44× between T10 and T20, so treat the ratios as rough.",
+    "IF ASKED — Tamb is lower than every prediction? Consistent with Tamb being a different regime (uncontrolled humidity, fluctuating temperature), as slide 12 showed.",
+    "IF ASKED — why MAE ∝ sd? For a fixed distribution shape, MAE is a constant multiple of sd (0.8 for Gaussian). That assumes small CV; under fixed σ the inverse-Gaussian CV differs 1.44× between T10 and T20, so treat the ratios as rough.",
+    "IF ASKED — caveats? MAE of a stage-based estimate, not the sd of τ, and labels are human. Derivation in A4.",
   ]);
 }
 
@@ -442,7 +447,7 @@ pres.addSection({ title: "Part 3: Gradients through noise" });
     ["Score function (Girsanov)", "none", "high", "drift params only"],
   ], 0.5, 2.98, [2.6, 1.6, 1.3, 2.0], { fontSize: 10.5, rowH: 0.3 });
   notes(s, [
-    "[14:00 – 15:45]",
+    "[12:15 – 13:45]",
     "• Pathwise: Z_T as a deterministic function of θ and fixed noise W; differentiate inside E. VAE reparameterization trick. Low variance; needs f differentiable.",
     "• Score function: E[f ∇ log p_θ]; any f, high variance.",
     "• Plot: for each fixed noise path, 'spoiled by t*' is a step in θ, derivative zero almost everywhere. The expectation (red) has nonzero slope. Pathwise returns 0: a biased gradient, not a noisy one.",
@@ -467,12 +472,14 @@ pres.addSection({ title: "Part 3: Gradients through noise" });
     [{ text: "Exact gradients", options: { color: RED, bold: true } }, "reversible Heun + matching discrete adjoint (torchsde)", "exact up to round-off"],
   ], 0.5, 3.55, [2.3, 3.6, 3.1], { fontSize: 10.5, rowH: 0.3, align: "left" });
   notes(s, [
-    "[15:45 – 17:15]",
-    "• Compare slide 9: an extra term per noise channel, aᵀ ∂σ_j/∂z ∘ dW^j, and the parameter gradient gets an integral against dW.",
-    "• Requirement 1: backward pass must see the same noise. A virtual Brownian tree regenerates W(s) from a seed by recursive Brownian-bridge sampling (A6).",
-    "• Requirement 2: in Stratonovich form the ordinary chain rule holds, so the ODE derivation carries over. μ here is the Stratonovich drift: convert the Itô model first (μ̃ = μ − ½Σ(∂σ_j/∂z)σ_j), or the gradients are wrong.",
-    "• Exactness: Kidger et al. NeurIPS 2021: reversible Heun is algebraically reversible; with its matching discrete adjoint, gradients are exact up to floating-point round-off at O(1) memory. In torchsde. Diffrax's BacksolveAdjoint is the continuous adjoint, approximate even with reversible Heun.",
+    "[13:45 – 15:05]",
+    "• Compare slide 9: one extra term per noise channel, aᵀ ∂σ_j/∂z ∘ dW^j.",
+    "• Requirement 1: the backward pass must see the same noise. A virtual Brownian tree regenerates W(s) from a seed (A6).",
+    "• Requirement 2: Stratonovich form, so the ordinary chain rule holds. Convert an Itô model's drift first, or the gradients are wrong.",
+    "• Exact version: reversible Heun with its matching discrete adjoint (Kidger 2021, torchsde). Diffrax's BacksolveAdjoint is approximate.",
     "",
+    "IF ASKED — conversion formula? μ̃ = μ − ½ Σ_j (∂σ_j/∂z) σ_j. Zero when σ doesn't depend on z.",
+    "IF ASKED — why is reversible Heun exact? It's algebraically reversible, so the backward pass recovers the forward states to round-off; pair it with the discrete adjoint of that scheme.",
     "IF ASKED — Itô directly? Possible, but the backward-in-time Itô SDE needs extra correction terms.",
   ]);
 }
@@ -485,8 +492,8 @@ pres.addSection({ title: "Part 3: Gradients through noise" });
     0.5, 3.82, [1.6, 1.2, 1.2, 1.6], { fontSize: 9.5, rowH: 0.21 });
   credit(s, "16-dim neural SDE, 32 paths, reversible Heun, CPU. github.com/nishadw/neural-sde. Setup: A8.", 6.3, 3.88, 3.2);
   notes(s, [
-    "[17:15 – 18:00]",
-    "If time or asked for a demo: run lecture/neural_sde_demo.py live, or play assets/demo.mp4 from the repo.",
+    "[15:05 – 15:45]",
+    "DEMO: no time in the talk. If someone asks during discussion, play assets/demo.mp4 (52 s).",
     "• Memory (log scale): backprop linear in steps, checkpointing ~log, adjoint flat but ~150 MB. The method needs only 2d + p ≈ 110 KB; the rest is a Diffrax/XLA implementation constant growing with params and noise channels (A8).",
     "• Time: adjoint ~60× slower.",
     "• Error: adjoint vs backprop falls ~1/steps: discretization error of optimize-then-discretize. Plain Heun slightly better than reversible Heun here: reversibility alone doesn't make the continuous adjoint exact.",
@@ -510,7 +517,7 @@ pres.addSection({ title: "Part 4: Training" });
   credit(s, "Li et al. 2020. KL derivation: A3.", 0.5, 3.9, 5);
   table(s, [["ELBO term", "Avocado data"], ["y_k", "stage label of image k"], ["t_k", "photo day (irregular)"], ["c", "T10 / T20 / Tamb"], ["shared σ", "else KL = ∞"]], 6.0, 1.4, [1.3, 2.2], { fontSize: 10.5, rowH: 0.33 });
   notes(s, [
-    "[18:00 – 19:30]",
+    "[15:45 – 17:05]",
     "• Latent SDE (Li et al. 2020): a VAE whose latent is a path.",
     "• Prior: our ripening SDE given only storage. Posterior: same σ, drift also sees the images (e.g., a GRU run backward over encoded photos gives a context per time).",
     "• ELBO: expected log-likelihood of observed stage labels at photo times − KL of initial state − KL between the SDEs.",
@@ -534,38 +541,15 @@ pres.addSection({ title: "Part 4: Training" });
   });
   table(s, [["", "Latent SDE (avocado)", "Diffusion model"], ["learns", "μ, σ", "score only"], ["training", "backprop through solver", "simulation-free"]], 0.5, 3.75, [0.9, 1.9, 1.7], { fontSize: 10, rowH: 0.24 });
   notes(s, [
-    "[19:30 – 20:30]",
-    "• Song et al. 2021: a fixed forward SDE noises data; Anderson (1982): its time reversal needs the score ∇ log p_t. Learn s_θ: the reverse SDE is a neural SDE.",
-    "• Probability-flow ODE: same marginals as the reverse SDE when s_θ is the true score; deterministic sampling; likelihoods via change of variables (Hutchinson trace estimator). Flow matching trains that ODE's velocity directly (π0 robot policies).",
-    "• Training is simulation-free: forward SDE is affine with known time-varying coefficients, so p(x_t | x_0) is Gaussian in closed form. No solver, no adjoint during training.",
-    "• Contrast: our model learns the dynamics, so it must backprop through the solve.",
-  ]);
-}
-
-// ================= 19. PROPOSED EVALUATION =================
-{
-  const s = content("Part 4: Training", "RUNNING EXAMPLE", "Proposed Evaluation Against the Paper's Baseline", "Same by-fruit split and MAE as the paper, plus calibration metrics that reward a distribution.");
-  const T = { text: "TBD", options: { color: GRAY, italic: true } };
-  table(s, [
-    ["Shelf-life metric", "Xavier et al. (CNN + linear)", "Latent ODE", { text: "Latent SDE", options: { color: RED } }],
-    ["MAE, T10 (days)", "1.82", T, T],
-    ["MAE, T20 (days)", "0.75", T, T],
-    ["MAE, Tamb (days)", "0.54", T, T],
-    ["MAE, all (days)", "1.04", T, T],
-    ["CRPS of τ, all (days)", { text: "1.04 (= MAE for a point)", options: { color: MUTED } }, T, T],
-    ["80% interval coverage", { text: "n/a", options: { color: MUTED } }, T, T],
-  ], 0.5, 1.4, [2.6, 2.6, 1.7, 1.7], { fontSize: 11.5, rowH: 0.38 });
-  credit(s, "Baseline: Table 6 (5-stage, by sample), " + CREDIT + ". TBD = experiment in progress.", 0.5, 4.2, 8);
-  notes(s, [
-    "[20:30 – 21:30]",
-    "TODO (project): fill the TBD cells once the experiment runs; keep the paper's 70/15/15 by-fruit split so numbers are comparable.",
-    "• Left column: the paper's numbers, by sample, 5-stage.",
-    "• MAE compares point accuracy (use the predictive median of τ).",
-    "• CRPS (continuous ranked probability score) and interval coverage evaluate the whole predictive distribution. A point forecast has CRPS equal to its MAE, so the baseline is 1.04 days; a calibrated distribution should beat it. Coverage needs an interval, which the paper doesn't give (a fairer baseline: Gaussian intervals from Fig. 6's per-stage sds).",
-    "• Caveats on the baseline: the paper doesn't say whether Table 6 is test-only or whether α was fit on all fruit, and 'by sample' keeps the better of the two sides. Refit α on the training fruit when reproducing it.",
+    "[17:05 – 18:00]",
+    "• Song et al. 2021: a fixed forward SDE turns data into noise. Reversing it needs the score ∇ log p_t; learn it as s_θ. The reverse SDE is a neural SDE.",
+    "• Probability-flow ODE: same marginals, deterministic sampling.",
+    "• Training is simulation-free: p(x_t | x_0) is Gaussian in closed form. No solver, no adjoint.",
+    "• Contrast: our avocado model learns the dynamics, so it must backprop through the solve.",
     "",
-    "IF ASKED — CRPS? CRPS(F, y) = ∫ (F(t) − 1{y ≤ t})² dt; reduces to MAE for a point forecast; lower is better; proper scoring rule.",
-    "IF ASKED — what if results aren't ready? Present this as the experimental plan; the baseline column is real.",
+    "IF ASKED — who showed the reversal? Anderson (1982).",
+    "IF ASKED — flow matching? Trains the probability-flow ODE's velocity directly; π0 robot policies use it.",
+    "IF ASKED — likelihoods? Change of variables along the ODE, with a Hutchinson trace estimator.",
   ]);
 }
 
@@ -581,7 +565,7 @@ pres.addSection({ title: "Part 4: Training" });
     ["Generative models", "image / audio", "score-based sampling", "Song et al. 2021"],
   ], 0.5, 1.4, [1.6, 1.6, 2.7, 3.1], { fontSize: 11, rowH: 0.4, align: "left" });
   notes(s, [
-    "[21:30 – 22:00] — SKIP-IF-SHORT.",
+    "[18:00 – 18:30] — SKIP-IF-SHORT.",
     "• Same pattern as the avocado: hidden state, randomness, sparse observations, decisions on the distribution of futures.",
     "• My repo also has the finance case: a neural local-vol SDE calibrated to a Heston smile by backprop through Monte Carlo (0.31 vol pts RMSE vs 4.21 flat).",
   ]);
@@ -600,12 +584,31 @@ pres.addSection({ title: "Part 4: Training" });
     ["Uncontrolled covariates", "Tamb 20% faster than Arrhenius", "condition on humidity if logged"],
   ], 0.5, 1.4, [1.9, 3.3, 3.8], { fontSize: 11, rowH: 0.42, align: "left" });
   notes(s, [
-    "[22:00 – 23:00] — analysis portion.",
-    "• Adjoint gradient isn't the gradient of what the forward solver computed; ANODE showed it can be badly wrong on stiff problems; measured 1e-4 to 1e-6 here.",
-    "• Learned dynamics stiffen; adaptive solvers take more steps; regularize kinetic energy / Jacobian norms.",
-    "• Our main target is discontinuous: naive pathwise training gives zero gradient.",
-    "• Identifiability: latent reparameterizations leave the likelihood unchanged; fast drift + small noise can mimic slow drift + big noise with sparse observations. Test by recovering a known SDE on synthetic data.",
-    "• Paper-specific: marks and wind rub (they report atypical visual damage that season) look like ripening; and ambient storage behaves differently from what temperature predicts (slide 12).",
+    "[18:30 – 19:30] — analysis portion.",
+    "• Adjoint: not the gradient of what the forward solver computed. ANODE showed it can be badly wrong; 1e-4 to 1e-6 here.",
+    "• Stiffness: learned dynamics stiffen and solvers slow down; regularize kinetic energy or Jacobian norms.",
+    "• Our target is discontinuous: naive pathwise training gives zero gradient.",
+    "• Identifiability: fast drift + small noise can mimic slow drift + big noise. Test on synthetic data with a known SDE.",
+    "• Paper-specific: surface marks look like ripening, and ambient storage doesn't follow temperature.",
+    "",
+    "IF ASKED — latent reparameterization? Any invertible map of the latent space leaves the likelihood unchanged; the ordinal head anchors the ripeness direction.",
+  ]);
+}
+
+// ================= 21. TAKEAWAYS =================
+{
+  const s = content("Part 4: Training", "SUMMARY", "Takeaways", null);
+  const pts = [
+    ["Avocados:", " drift explains the mean; the spread needs diffusion."],
+    ["Gradients:", " checkpointing is exact and cheap; the adjoint's O(1) memory costs accuracy."],
+    ["Targets:", " first-passage losses need bridge, surrogate, or score-function gradients."],
+    ["Training:", " latent-SDE ELBO; the path KL comes from Girsanov."],
+  ];
+  pts.forEach(([h, t], i) => txt(s, [B(h, { color: i === 0 ? RED : INK }), M(t, { color: INK })], 0.5, 1.5 + i * 0.75, 9, 0.4, { fontSize: 17 }));
+  notes(s, [
+    "[19:30 – 20:00]",
+    "• Four things to remember. Read each line once; don't add new material.",
+    "• Then: 'Let's open it up. Three questions to start.'",
   ]);
 }
 
@@ -613,9 +616,9 @@ pres.addSection({ title: "Part 4: Training" });
 {
   const s = content("Part 4: Training", "DISCUSSION", "Questions for the Room", null);
   const qs = [
-    "Which estimator would you train P(τ ≤ t*) with: surrogate, bridge crossing, or score function?",
-    "Slide 13 suggests extra spread at low temperature. How would you test whether σ depends on temperature?",
-    "Which differentiable simulator from this course would you make stochastic, and what happens to its gradients?",
+    "Which estimator for P(τ ≤ t*): surrogate, bridge crossing, or score function?",
+    "Does σ depend on temperature? How would you test it on this data?",
+    "Which simulator from this course would you make stochastic? What happens to gradients?",
   ];
   qs.forEach((q, i) => {
     const y = 1.45 + i * 1.0;
@@ -624,11 +627,12 @@ pres.addSection({ title: "Part 4: Training" });
   });
   txt(s, [M("Code, benchmarks, slides: github.com/nishadw/neural-sde")], 0.5, 4.6, 9, 0.3, { fontSize: 11 });
   notes(s, [
-    "[23:00 – 28:00]",
+    "[20:00 – 25:00] — hard stop at 25:00.",
+    "~1:30 per question, then close.",
     "• Q1: bias vs variance. Bridge crossing: exact per step for frozen coefficients, low variance. Score function: unbiased, noisy, drift params only. Sigmoid: needs ε annealing.",
     "• Q2: fit the latent SDE with σ_θ(c) free per group, compare to σ ∝ √κ(c) by held-out likelihood; or estimate per-group variance of daily stage increments directly from the label sequences.",
     "• Q3 (Prof. Lin's lectures): stochastic forcing adds Monte Carlo variance and needs same-noise replay; for contact-rich systems noise can smooth the loss landscape (randomized smoothing).",
-    "• Close: thank you; questions. Appendix follows (not presented).",
+    "• Close at 25:00: 'Thanks. Code and slides are on GitHub.' Appendix is for questions only.",
   ]);
 }
 
@@ -648,7 +652,7 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
   notes(s, ["Appendix A1. Since ż − f = 0 on solutions, adding ∫aᵀ(ż − f)dt leaves L unchanged for any a. Integrate by parts to move d/dt off ∂z/∂θ; choose a to kill those terms."]);
 }
 { // A2
-  const s = appx("A2", "Why Stratonovich for the Stochastic Adjoint", "Stratonovich SDEs obey the ordinary chain rule, so the ODE adjoint carries over term by term.");
+  const s = appx("A2", "Why Stratonovich for the Stochastic Adjoint", "Stratonovich obeys the ordinary chain rule, so the ODE adjoint carries over.");
   img(s, "v2_strat_ode.png", 0.5, 1.45, { w: 9, h: 0.45 });
   table(s, [
     ["", "Itô", "Stratonovich"],
@@ -666,7 +670,7 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
   img(s, "v2_girs1.png", 0.5, 1.64, { h: 0.66 });
   label(s, "Under Q: W^P = W^Q + ∫u dt; the Itô integral has zero mean", 0.5, 2.45, 9);
   img(s, "v2_girs2.png", 0.5, 2.71, { h: 0.66 });
-  txt(s, [B("Conditions: "), M("same σσᵀ; Novikov: E_P exp(½∫‖u‖²dt) < ∞. "), B("In code: "), M("dℓ = ½‖u‖² dt appended to the state; ℓ_T is a one-sample MC estimate.")], 0.5, 3.6, 9, 0.6, { fontSize: 11.5 });
+  txt(s, [B("Conditions: "), M("same σσᵀ; Novikov: E_P exp(½∫‖u‖²dt) < ∞.", { breakLine: true }), B("In code: "), M("append dℓ = ½‖u‖² dt to the state; ℓ_T is a one-sample estimate.")], 0.5, 3.6, 9, 0.6, { fontSize: 11.5 });
   notes(s, ["Appendix A3. Different σσᵀ ⇒ different quadratic variation ⇒ mutually singular measures ⇒ KL = ∞."]);
 }
 { // A4
@@ -676,7 +680,7 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
   txt(s, [M("⇒  E τ = L / v,   Var τ = L σ² / v³   (inverse Gaussian, mean L/v, shape L²/σ²)")], 0.5, 2.36, 9, 0.3, { fontSize: 12 });
   label(s, "ratios between storage groups at equal distance L", 0.5, 2.8, 9);
   img(s, "v3_ratio.png", 0.5, 3.06, { w: 8, h: 0.5 });
-  txt(s, [M("Rates from Table 4: v₁₀ = 0.228, v₂₀ = 0.473, v_amb = 0.518 stages/day. MAE used as a proxy for sd (assumes small CV); quantization predicts v₂₀/v too; labeling noise ignored.")], 0.5, 3.75, 9, 0.6, { fontSize: 11 });
+  txt(s, [M("Rates (Table 4): v₁₀ = 0.228, v₂₀ = 0.473, v_amb = 0.518 stages/day.", { breakLine: true }), M("Assumes MAE ∝ sd (small CV). Quantization also predicts v₂₀/v₁₀.", { breakLine: true }), M("Labeling noise ignored.")], 0.5, 3.7, 9, 0.75, { fontSize: 11 });
   notes(s, ["Appendix A4. Derivation via the Laplace transform of the hitting time of Brownian motion with drift, or via Wald's identities: E τ = L/v; Var τ = Lσ²/v³."]);
 }
 { // A5
@@ -699,11 +703,11 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
   img(s, "v2_vbt.png", 0.5, 1.64, { h: 0.5 });
   label(s, "crossing probability within a step (σ_q = local vol of q, frozen)", 0.5, 2.35, 9);
   img(s, "v2_bridge.png", 0.5, 2.61, { h: 0.55 });
-  txt(s, [M("P(τ ≤ t*) ≈ 1 − Π_k (1 − p_k), p_k = 1 if an endpoint ≥ b.  σ_q² = ‖∇q(Z_k)ᵀ σ_θ(Z_k)‖².  Drift cancels after conditioning on endpoints.")], 0.5, 3.35, 9, 0.6, { fontSize: 11.5 });
+  txt(s, [M("P(τ ≤ t*) ≈ 1 − Π_k (1 − p_k), with p_k = 1 if an endpoint ≥ b.", { breakLine: true }), M("σ_q² = ‖∇q(Z_k)ᵀ σ_θ(Z_k)‖². Drift cancels after conditioning on endpoints.")], 0.5, 3.35, 9, 0.6, { fontSize: 11.5 });
   notes(s, ["Appendix A6. Standard Brownian-bridge (continuity) correction from barrier-option pricing; removes discrete-monitoring bias for the frozen-coefficient interpolant; solver weak error remains."]);
 }
 { // A7
-  const s = appx("A7", "SDE Solvers", "Match the solver to the calculus you wrote and the order to the quantity you need.");
+  const s = appx("A7", "SDE Solvers", "Match solver to your calculus, and order to the quantity you need.");
   table(s, [
     ["Solver", "Converges to", "Strong order", "Weak order", "Notes"],
     ["Euler–Maruyama", "Itô", "½ (1 additive)", "1", "default"],
@@ -729,7 +733,24 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
   notes(s, ["Appendix A8. Scripts: experiments/adjoint_tradeoffs.py, adjoint_memory_scaling.py."]);
 }
 { // A9
-  const s = appx("A9", "References and Figure Credits", null);
+  const s = appx("A9", "Evaluation Protocol (If Asked)", "Same by-fruit split; CRPS and coverage reward a calibrated distribution.");
+  table(s, [
+    ["Shelf-life metric", "Xavier et al. (CNN + linear)", "What a latent SDE reports"],
+    ["MAE, T10 / T20 / Tamb (days)", "1.82 / 0.75 / 0.54", "median of τ"],
+    ["MAE, all (days)", "1.04", "median of τ"],
+    ["CRPS of τ, all (days)", "1.04 (= MAE for a point)", "full predictive distribution"],
+    ["80% interval coverage", { text: "n/a (no interval)", options: { color: MUTED } }, "should be ≈ 80%"],
+  ], 0.5, 1.4, [3.0, 2.8, 3.2], { fontSize: 11.5, rowH: 0.4 });
+  credit(s, "Baseline: Table 6 (5-stage, by sample), " + CREDIT + ".", 0.5, 3.6, 8);
+  notes(s, [
+    "Appendix A9. How the model would be scored against the paper; no new experiments are claimed.",
+    "• Keep the paper's 70/15/15 by-fruit split; refit α on training fruit only.",
+    "• CRPS(F, y) = ∫ (F(t) − 1{y ≤ t})² dt; equals absolute error for a point forecast; proper scoring rule.",
+    "• Baseline caveats: unclear whether Table 6 is test-only; 'by sample' keeps the better of two sides.",
+  ]);
+}
+{ // A10
+  const s = appx("A10", "References and Figure Credits", null);
   const L = [
     "Xavier, Rodrigues & Silva. Shelf-life management and ripening assessment of 'Hass' avocado using deep learning. Foods 13(8):1150, 2024. doi:10.3390/foods13081150. CC BY 3.0 (Figs. 1, 2, 6a, 11; Tables 3, 4, 6).",
     "'Hass' Avocado Ripening Photographic Dataset. Mendeley Data, 2024. doi:10.17632/3xd9n945v8.",
@@ -751,7 +772,7 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
   const runs = (a) => a.map((t, i) => ({ text: t, options: { breakLine: i < a.length - 1, paraSpaceAfter: 5 } }));
   txt(s, runs(L), 0.5, 1.38, 4.4, 3.9, { fontSize: 9.5 });
   txt(s, runs(Rr), 5.1, 1.38, 4.4, 3.9, { fontSize: 9.5 });
-  notes(s, ["Appendix A9."]);
+  notes(s, ["Appendix A10."]);
 }
 
 (async () => {

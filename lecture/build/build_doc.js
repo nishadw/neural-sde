@@ -49,16 +49,16 @@ const kids = [];
 kids.push(new Paragraph({ spacing: { after: 60 }, children: [t("CMSC 838B  ·  STUDENT LECTURE  ·  FALL 2026", { bold: true, color: RED, size: 18 })] }));
 kids.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [t("Neural SDEs: Reading and Prep Guide")] }));
 kids.push(P([t("Lecture: ", { color: MUTED }), b("Backprop Through Continuous Time: Neural SDEs: Modeling, Gradients, and Training"), t("   ·   Running example: 'Hass' avocado ripening (Xavier, Rodrigues & Silva, Foods 2024)   ·   Nishad Wajge", { color: MUTED })]));
-kids.push(P([t("Part 1 is the reading list for the class, ready to post with the slides. Part 2 is your prep plan, ordered to match the deck. Part 3 explains every equation on the slides in plain words. Part 4 is the questions you should be able to answer cold. Part 5 lists what's still to fill in.")]));
-kids.push(P([t("Deck layout: 22 presented slides plus appendix A1–A9 (derivations, solver table, benchmark setup, credits), which you don't present but should be able to open if asked. The running example uses the paper's own figures and tables (CC BY 3.0); every number derived from them (rates, Eₐ, first-passage ratios) is worked out in A4 and A5.")]));
+kids.push(P([t("Part 1 is the reading list for the class, ready to post with the slides. Part 2 is your prep plan, ordered to match the deck. Part 3 explains every equation on the slides in plain words. Part 4 is the questions you should be able to answer cold. Part 5 covers what's deliberately left out.")]));
+kids.push(P([t("Deck layout: 22 presented slides plus appendix A1–A10 (derivations, solver table, benchmark setup, evaluation protocol, credits), which you don't present but should be able to open if asked. The running example uses the paper's own figures and tables (CC BY 3.0); every number derived from them (rates, Eₐ, first-passage ratios) is worked out in A4 and A5.")]));
 
 // ---- Course requirements
 kids.push(H1("Course requirements for the lecture"));
-kids.push(P([t("From the course's Class Presentation page and its posting instructions. Grading: "), b("advance preparation 40%"), t(", "), b("analysis and discussion of the materials 40%"), t(", "), b("style and clarity 20%"), t(". Length isn't stated; last year's schedule fit two or three talks per 75-minute class. The deck runs about 23 minutes plus 5 of discussion, and slides 7 and 20 can be skipped to fit 20.")]));
+kids.push(P([t("From the course's Class Presentation page and its posting instructions. Grading: "), b("advance preparation 40%"), t(", "), b("analysis and discussion of the materials 40%"), t(", "), b("style and clarity 20%"), t(". Length isn't stated; last year's schedule fit two or three talks per 75-minute class. Each student lecture gets 25 minutes. The deck is timed to exactly that: 20:00 of talk, then 5:00 of discussion, hard stop at 25:00. If you fall behind, skip slides 7 and 19 (about 70 seconds).")]));
 kids.push(table([3000, 2200, 4160], ["Step", "When", "Notes"], [
   [[b("Topic + reading list to Prof. Lin")], "Was due Oct 9", "If not already sent, send Part 1 now."],
   ["1:1 meeting with Prof. Lin", "Before the talk", "She goes through the materials with you in detail."],
-  ["Draft slides + initial treatment", "1 week before your slot", "Send the .pptx, placeholders and all; say the results slide is in progress."],
+  ["Draft slides + initial treatment", "1 week before your slot", "Send the .pptx, placeholders and all; the running example uses published data only."],
   ["Hand out readings not online", "1 lecture before", "Not needed: every reading below is online."],
   ["Post slides, readings, discussion questions", "24 hours before", "Slides as PowerPoint, readings as PDF, in a public_html subfolder. Email her the exact location."],
 ]));
@@ -74,7 +74,7 @@ kids.push(...entry("Scalable Gradients for Stochastic Differential Equations", "
   "Read the stochastic adjoint, the virtual Brownian tree, and the latent SDE (ELBO via Girsanov). These are slides 15 and 17."));
 kids.push(H2("Running example (short, skim)"));
 kids.push(...entry("Shelf-Life Management and Ripening Assessment of 'Hass' Avocado Using Deep Learning", "https://doi.org/10.3390/foods13081150", "Xavier, Rodrigues & Silva · Foods 13(8):1150, 2024 · open access, CC BY",
-  "About 20 minutes. Read the abstract, Section 2 (storage groups, ripening index, the Days Left regression) and look at Figs. 1, 2, 6 and 11 and Tables 3, 4 and 6. Slides 2–6, 12, 13 and 19 use these directly."));
+  "About 20 minutes. Read the abstract, Section 2 (storage groups, ripening index, the Days Left regression) and look at Figs. 1, 2, 6 and 11 and Tables 3, 4 and 6. Slides 2–6, 12 and 13 use these directly."));
 kids.push(H2("Optional"));
 kids.push(...entry("Monte Carlo Gradient Estimation in Machine Learning", "https://arxiv.org/abs/1906.10652", "Mohamed, Rosca, Figurnov, Mnih · JMLR 2020",
   "Sections on pathwise and score-function estimators. Background for slide 14."));
@@ -91,7 +91,26 @@ kids.push(num("Which differentiable simulator from this course would you make st
 
 // ---- Part 2
 kids.push(H1("Part 2. Your prep plan"));
-kids.push(P([t("About 23 hours over two weeks, in deck order. Where a stage lists a video, watch it before the paper.")]));
+kids.push(H2("If you only have a week: the fast path (~9 hours)"));
+kids.push(note("Do these in order. Each one covers specific slides; the full plan below goes deeper."));
+kids.push(table([3700, 1000, 1500, 3160], ["Read or watch", "Time", "Slides", "Why"], [
+  [[link("Xavier et al. 2024, Foods (avocado paper)", "https://doi.org/10.3390/foods13081150")], "20 min", "2–6, 12, 13", "Every number in the running example comes from Tables 4 and 6."],
+  [[link("Video: Duvenaud, Latent SDEs", "https://www.microsoft.com/en-us/research/?p=750409")], "1 hr", "15, 17", "The stochastic adjoint and latent SDE, from the author."],
+  [[link("Chen et al. 2018, Neural ODEs", "https://arxiv.org/abs/1806.07366")], "1 hr", "7–9", "Sections 1–3 and the adjoint appendix (A1)."],
+  [[link("Higham 2001, SDE simulation", "https://webhomes.maths.ed.ac.uk/~dhigham/Publications/P42.pdf")], "1 hr", "10, A7", "Itô, Euler–Maruyama, strong vs. weak order, with code."],
+  [[link("Li et al. 2020, Scalable Gradients for SDEs", "https://arxiv.org/abs/2001.01328")], "1.5 hr", "15, 17, A3", "Class reading: adjoint, Brownian tree, ELBO."],
+  [[link("Mohamed et al. 2020, MC gradients", "https://arxiv.org/abs/1906.10652")], "45 min", "14", "Pathwise vs. score function; why pathwise fails on steps."],
+  [[link("Video: Yang Song, score-based models", "https://cbmm.mit.edu/video/diffusion-and-score-based-generative-models")], "1 hr", "18", "Diffusion models as SDEs."],
+  [[link("Kidger thesis, neural SDE chapters", "https://arxiv.org/abs/2202.02435")], "1.5 hr", "15, 16, 20", "Reversible Heun, exact adjoints, practical advice."],
+  [[b("Rehearse 3 full runs with a timer")], "1.5 hr", "all", "Use the practice script; hit the checkpoints."],
+]));
+kids.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+kids.push(H2("Rehearsal checkpoints"));
+kids.push(bullet("Slide 9 by 6:00, slide 14 by 12:15, slide 20 by 18:30, discussion by 20:00."));
+kids.push(bullet("You can't see notes while presenting: each slide's bottom line is your cue for its main point."));
+kids.push(bullet("Behind by more than a minute at slide 14? Skip slide 19 and shorten slide 16 to its takeaway."));
+kids.push(H2("Full plan"));
+kids.push(P([t("About 23 hours if you have two weeks, in deck order. Where a stage lists a video, watch it before the paper.")]));
 const stage = (title, hrs, slides) => new Paragraph({ heading: HeadingLevel.HEADING_2, keepNext: true, children: [t(title), t(`   ${hrs}  ·  slides ${slides}`, { color: MUTED, bold: false, size: 20 })] });
 
 kids.push(stage("Stage 1. Neural ODEs and the adjoint", "~4 hr", "7–9, A1"));
@@ -102,8 +121,8 @@ kids[kids.length - 1] = new Paragraph({ indent: { left: 720 }, spacing: { after:
 kids.push(...entry("Video: Neural Ordinary Differential Equations", "https://av.fields.utoronto.ca/talks/Neural-Ordinary-Differential-Equations", "David Duvenaud · Fields Institute",
   "The author on the paper, including what didn't work."));
 kids.push(...entry("Neural Ordinary Differential Equations", "https://arxiv.org/abs/1806.07366", "Chen et al. · NeurIPS 2018", "Class reading. Read the adjoint appendix too: it's the derivation in appendix A1."));
-kids.push(...entry("Latent ODEs for Irregularly-Sampled Time Series", "https://arxiv.org/abs/1907.03907", "Rubanova, Chen, Duvenaud · NeurIPS 2019", "The deterministic version of the avocado model (the Latent ODE column on slides 6 and 19)."));
-kids.push(...entry("ANODE", "https://arxiv.org/abs/1902.10298", "Gholami, Keutzer, Biros · IJCAI 2019", "When the adjoint gives wrong gradients (slide 21, first row)."));
+kids.push(...entry("Latent ODEs for Irregularly-Sampled Time Series", "https://arxiv.org/abs/1907.03907", "Rubanova, Chen, Duvenaud · NeurIPS 2019", "The deterministic version of the avocado model (the Latent ODE column on slide 6)."));
+kids.push(...entry("ANODE", "https://arxiv.org/abs/1902.10298", "Gholami, Keutzer, Biros · IJCAI 2019", "When the adjoint gives wrong gradients (slide 20, first row)."));
 
 kids.push(stage("Stage 2. Stochastic calculus and the avocado model", "~5.5 hr", "10–13, A2, A4, A5, A7"));
 kids.push(...entry("An Algorithmic Introduction to Numerical Simulation of SDEs", "https://webhomes.maths.ed.ac.uk/~dhigham/Publications/P42.pdf", "Higham · SIAM Review 2001",
@@ -129,7 +148,7 @@ kids.push(...entry("Video: Diffusion and Score-Based Generative Models", "https:
 kids.push(...entry("Score-Based Generative Modeling through SDEs", "https://arxiv.org/abs/2011.13456", "Song et al. · ICLR 2021", "Forward SDE, reverse SDE, probability-flow ODE, denoising score matching."));
 kids.push(...entry("Introduction to Flow Matching and Diffusion Models (lecture notes)", "https://diffusion.csail.mit.edu/2026/", "MIT 6.S184 · Holderrieth & Erives", "Builds diffusion and flow matching from ODEs and SDEs."));
 
-kids.push(stage("Stage 5. Applications", "~1.5 hr", "20"));
+kids.push(stage("Stage 5. Applications", "~1.5 hr", "19"));
 kids.push(P([t("Abstract and main figure of each; one sentence per table row, plus one follow-up answer.")]));
 const apps = [
   ["GenCast: Diffusion-based ensemble forecasting for medium-range weather", "https://arxiv.org/abs/2312.15796", "Price et al. · Nature 2025"],
@@ -173,7 +192,7 @@ const eqs = [
   ["Slide 17 · prior and posterior SDEs", "Prior: dynamics that know only the storage condition (used to forecast). Posterior: same σ, but the drift also sees the images (used to filter during training)."],
   ["Slide 17 · ELBO with ∫½‖u‖² dt, σu = h_φ − h_θ", "Expected log-likelihood of observed stage labels minus two KLs: one for the starting state, one for the whole path. Girsanov makes the path KL the integral of ½‖u‖², where u is the drift gap measured in units of σ. Add it as an extra state and integrate. Derivation in A3."],
   ["Slide 18 · forward, reverse, probability-flow, score matching", "Forward: fixed noising SDE. Reverse: same SDE run backward needs the score ∇ log p_t, learned as s_θ. Probability-flow ODE: deterministic, same marginals if s_θ is exact. Training regresses s_θ onto the closed-form score of p(x_t | x_0): no solver needed."],
-  ["Slide 19 · CRPS(F, y) = ∫(F(t) − 1{y ≤ t})² dt", "Scores a whole predictive distribution of τ against the true day y. Lower is better, and it's a proper scoring rule. For a point forecast it equals the absolute error, so the paper's baseline CRPS is its MAE (1.04 days overall)."],
+  ["A9 · CRPS(F, y) = ∫(F(t) − 1{y ≤ t})² dt", "Scores a whole predictive distribution of τ against the true day y. Lower is better, and it's a proper scoring rule. For a point forecast it equals the absolute error, so the paper's baseline CRPS is its MAE (1.04 days overall)."],
   ["A6 · Brownian bridge", "Given W at two times, W in between is Gaussian: mean on the straight line, variance (s−u)(v−s)/(v−u). Used to regenerate W on demand and to compute the chance a path crossed b between steps: exp(−2(b−q_k)(b−q_{k+1})/(σ_q²Δt))."],
 ];
 eqs.forEach(([q, a]) => {
@@ -202,19 +221,18 @@ const qa = [
   ["Doesn't slide 13 prove there's diffusion?", "No. Quantization alone predicts 2.07; observed is 2.33. That excess is consistent with extra randomness at 10 °C, but it's three numbers, MAE stands in for sd, and labels are human. It's a sanity check on the shape of the model."],
   ["Could a latent ODE produce spread too?", "Yes, via an uncertain initial state or per-fruit rate, and that spread grows linearly with horizon. But it collapses as images accumulate. The SDE adds noise that keeps arriving (sd ∝ √h). Fig. 6's per-stage sds could distinguish the two."],
   ["Is the paper's baseline fair to compare against?", "Mostly. Caveats: the paper doesn't say whether Table 6 is test-only or whether α was fit on all fruit, and 'by sample' keeps the better of two sides. When reproducing, refit α on training fruit only."],
-  ["Why not a sequence model with a hazard head?", "It's a legitimate baseline (slide 6 column; add it to slide 19). The SDE gives irregular times, uncertainty over futures and a physics-structured rate by construction."],
+  ["Why not a sequence model with a hazard head?", "It's a legitimate baseline (slide 6 column). The SDE gives irregular times, uncertainty over futures and a physics-structured rate by construction."],
 ];
 qa.forEach(([q, a]) => {
   kids.push(new Paragraph({ spacing: { before: 120, after: 40 }, keepNext: true, children: [b(q)] }));
   kids.push(new Paragraph({ spacing: { after: 80 }, children: [t(a)] }));
 });
 
-// ---- Part 5: placeholders
-kids.push(H1("Part 5. Still to fill in"));
-kids.push(note("The running example now uses the paper's own figures and tables, so the only open items are your experiment's results."));
-kids.push(bullet([b("Slide 19: "), t("the TBD cells for the latent ODE and latent SDE (MAE per group, CRPS, 80% interval coverage). Use the paper's 70/15/15 by-fruit split, refit α on training fruit, and report the median of τ for MAE.")]));
-kids.push(bullet([b("Optional: "), t("add a sequence-model baseline column (GRU with time gaps and a hazard head), and the per-stage sd check from Fig. 6 (does spread grow like √h or like h?).")]));
-kids.push(bullet([b("If results aren't ready: "), t("present slide 19 as the experimental plan; the baseline column is real.")]));
+// ---- Part 5: what is left out
+kids.push(H1("Part 5. What's not in the talk"));
+kids.push(note("The talk uses only the paper's published data. Nothing on the slides depends on new experiments."));
+kids.push(bullet([b("No results slide: "), t("the evaluation plan moved to appendix A9 (baseline numbers from the paper, how a latent SDE would be scored). Open it only if asked.")]));
+kids.push(bullet([b("If asked whether you ran the model: "), t("say no; this lecture analyzes the paper's data with the neural-SDE lens, and your semester project is where you'll fit it.")]));
 kids.push(bullet([b("Figures: "), t("the paper's figures are CC BY 3.0 and credited on each slide (cropped panels say so). The originals are in your Downloads folder.")]));
 
 // ---------- document ----------
