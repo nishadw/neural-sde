@@ -1,0 +1,37 @@
+{
+  "splits": {
+    "train": [
+      "syn0006",
+      "syn0012",
+      "syn0009",
+      "syn0018",
+      "syn0015",
+      "syn0000",
+      "syn0019",
+      "syn0007",
+      "syn0022",
+      "syn0013",
+      "syn0016",
+      "syn0004",
+      "syn0011",
+      "syn0008",
+      "syn0005",
+      "syn0023",
+      "syn0020",
+      "syn0002"
+    ],
+    "val": [
+      "syn0003",
+      "syn0001",
+      "syn0017"
+    ],
+    "test": [
+      "syn0021",
+      "syn0010",
+      "syn0014"
+    ]
+  },
+  "mode": "random",
+  "seed": 0,
+  "data": "synthetic"
+}

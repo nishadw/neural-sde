@@ -1,0 +1,28 @@
+{
+  "splits": {
+    "train": [
+      "avo03",
+      "avo12",
+      "avo04",
+      "avo11",
+      "avo01",
+      "avo05",
+      "avo08",
+      "avo06",
+      "avo15",
+      "avo13"
+    ],
+    "val": [
+      "avo07",
+      "avo10"
+    ],
+    "test": [
+      "avo14",
+      "avo09",
+      "avo02"
+    ]
+  },
+  "mode": "random",
+  "seed": 0,
+  "data": "a2sl"
+}
