@@ -56,5 +56,5 @@ sparser-visit ablation. ✔ known-set changed to `(lo ≥ h) | (hi ≤ h)`. ✔ 
 
 ## Open
 
-- An exact grid-filtering likelihood for the 1-D progression coordinate (no amortised posterior for `R`) would
-  remove the variational gap on the common factor; listed as the next method step in `theory.md` §5.
+- ~~An exact grid-filtering likelihood~~ — implemented the same day as `ripen.models.fpt_filter` (`theory.md`
+  P5); it recovers the absolute rates within 20 % where the ELBO could not. Needs its own verifier pass.

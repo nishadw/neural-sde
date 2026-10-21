@@ -6,6 +6,7 @@ import jax
 
 from ..data.collate import DatasetInfo
 from .baselines import DirectRegressor, DiscreteSurvival, StageLinearRule
+from .fpt_filter import FirstPassageFilter
 from .latent import LatentDynamics
 from .sequence import SequenceSurvival
 
@@ -62,6 +63,13 @@ MODEL_REGISTRY = {
     "gru_gap": _seq("gru"),
     "gru_d": _seq("gru_d"),
     "ode_rnn": _seq("ode_rnn"),
+    "fpt_filter": lambda cfg, info, key: FirstPassageFilter(
+        info.feat_dim,
+        len(info.groups),
+        cfg["horizon"],
+        key=key,
+        **{k: v for k, v in cfg.items() if k not in ("name", "horizon", "seed")},
+    ),
     "latent_ode": _latent("ode"),
     "latent_sde": _latent("sde"),
 }

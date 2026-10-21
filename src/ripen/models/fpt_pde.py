@@ -22,6 +22,29 @@ import jax.numpy as jnp
 from jax import Array
 
 
+def generator_matrix(
+    mu: Callable[[Array], Array], sigma: Callable[[Array], Array], boundary: Array, r_min: float, n_grid: int
+) -> tuple[Array, Array, Array]:
+    """Discrete backward generator ``L`` of ``mu S' + 1/2 sigma^2 S''`` on ``r = linspace(r_min, boundary, n_grid)``.
+
+    Central differences for ``S'`` where the cell Peclet number allows an M-matrix (``|mu| h <= sigma^2``),
+    upwind elsewhere; centred ``S''``; reflecting at ``r_min`` (``S_0 = S_1``), absorbing at the boundary (row
+    zeroed, so the last node is a cemetery for the transposed, forward operator). Returns ``(L, r, h)``.
+    """
+    r = jnp.linspace(r_min, boundary, n_grid)
+    h = (boundary - r_min) / (n_grid - 1)
+    m = jax.vmap(mu)(r)
+    s2 = 0.5 * jax.vmap(sigma)(r) ** 2
+    central = jnp.abs(m) * h <= 2.0 * s2
+    up = jnp.where(central, m / (2 * h), jnp.where(m >= 0, m / h, 0.0)) + s2 / h**2  # coefficient of S_{i+1}
+    lo = jnp.where(central, -m / (2 * h), jnp.where(m < 0, -m / h, 0.0)) + s2 / h**2  # coefficient of S_{i-1}
+    diag = -(up + lo)
+    L = jnp.diag(diag) + jnp.diag(up[:-1], 1) + jnp.diag(lo[1:], -1)
+    L = L.at[0, :].set(0.0).at[0, 0].set(-(up[0])).at[0, 1].set(up[0])
+    L = L.at[-1, :].set(0.0)
+    return L, r, h
+
+
 def survival_table(
     mu: Callable[[Array], Array],
     sigma: Callable[[Array], Array],
@@ -36,20 +59,9 @@ def survival_table(
     ``mu``/``sigma`` map a scalar ``r`` to scalars (vectorised with ``vmap``). ``S`` has shape
     ``(n_steps + 1, n_grid)``; ``S[:, -1] = 0`` (absorbing), ``S[0, :-1] = 1``.
     """
-    r = jnp.linspace(r_min, boundary, n_grid)
-    h = (boundary - r_min) / (n_grid - 1)
-    m = jax.vmap(mu)(r)
-    s2 = 0.5 * jax.vmap(sigma)(r) ** 2
-    # generator L S = mu S' + 1/2 sigma^2 S''. Central differences for S' where the cell Peclet number allows an
-    # M-matrix (|mu| h <= sigma^2), upwind elsewhere; centred S''.
-    central = jnp.abs(m) * h <= 2.0 * s2
-    up = jnp.where(central, m / (2 * h), jnp.where(m >= 0, m / h, 0.0)) + s2 / h**2  # coefficient of S_{i+1}
-    lo = jnp.where(central, -m / (2 * h), jnp.where(m < 0, -m / h, 0.0)) + s2 / h**2  # coefficient of S_{i-1}
-    diag = -(up + lo)
-    L = jnp.diag(diag) + jnp.diag(up[:-1], 1) + jnp.diag(lo[1:], -1)
-    # boundary rows: reflecting at r_min (S_0 = S_1 -> zero row with ghost folded in), absorbing at b (S_{N-1} = 0)
-    L = L.at[0, :].set(0.0).at[0, 0].set(-(up[0])).at[0, 1].set(up[0])
-    L = L.at[-1, :].set(0.0)
+    L, r, _ = generator_matrix(mu, sigma, boundary, r_min, n_grid)
+    n_grid = L.shape[0]
+    ds = float(ds)
     eye = jnp.eye(n_grid)
     # theta scheme: Crank-Nicolson (second order in ds) after two implicit-Euler start-up steps (Rannacher), which
     # damp the oscillations CN would otherwise create from the jump in the initial condition at the boundary

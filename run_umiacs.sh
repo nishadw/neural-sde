@@ -15,7 +15,7 @@
 # Experiments (see docs/experiment_plan.md):
 #   synthetic  fake-fruit recovery at full scale                     results/synthetic/
 #   e1         every model on the Mendeley avocado set               results/runs/<model>_avocado
-#   e2         PDE vs Monte Carlo event likelihood (latent SDE)      results/runs/latent_sde_avocado_{pde,mc}
+#   e2         exact filter vs PDE-ELBO vs Monte Carlo likelihoods    results/runs/{fpt_filter,latent_sde}_*
 #   e3         leave-one-storage-group-out transfer + clock ablation results/runs/*_logo_*
 #   e4         sampling-frequency and photo-count ablations          results/runs/*_every{2,3}, metrics_by_n_obs.json
 #   e5         second domains: PBC2 and C-MAPSS                      results/runs/<model>_{pbc2,cmapss}
@@ -29,7 +29,7 @@ export RIPEN_GPU="${RIPEN_GPU:-gpu:1}"
 export PYTHONUNBUFFERED=1 XLA_PYTHON_CLIENT_PREALLOCATE=false
 STAGE="${1:-all}"; LOCAL=0; [[ "${2:-}" == "--local" ]] && LOCAL=1
 PY="${RIPEN_ENV}/bin/python"
-MODELS=(stage_linear direct_reg discrete_surv gru_gap gru_d ode_rnn latent_ode latent_sde)
+MODELS=(stage_linear direct_reg discrete_surv gru_gap gru_d ode_rnn latent_ode latent_sde fpt_filter)
 mkdir -p results/logs results/runs
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -77,13 +77,15 @@ stage_e1() {
 stage_e2() {
   JOBS[e2_pde]=$(submit e2-pde "$PY scripts/train.py model=latent_sde data=avocado model.event_likelihood=pde run_name=latent_sde_avocado_pde")
   JOBS[e2_mc]=$(submit e2-mc "$PY scripts/train.py model=latent_sde data=avocado model.event_likelihood=mc run_name=latent_sde_avocado_mc")
+  JOBS[e2_filter]=$(submit e2-filter "$PY scripts/train.py model=fpt_filter data=avocado run_name=fpt_filter_avocado_exact")
+  JOBS[e2_synth_filter]=$(submit e2-synth-filter "$PY scripts/train.py model=fpt_filter data=synthetic run_name=fpt_filter_synthetic_exact")
   JOBS[e2_synth_pde]=$(submit e2-synth-pde "$PY scripts/train.py model=latent_sde data=synthetic model.event_likelihood=pde run_name=latent_sde_synthetic_pde")
   JOBS[e2_synth_mc]=$(submit e2-synth-mc "$PY scripts/train.py model=latent_sde data=synthetic model.event_likelihood=mc run_name=latent_sde_synthetic_mc")
 }
 
 stage_e3() {
   for g in T10 T20 Tamb; do
-    for m in direct_reg gru_d latent_sde; do JOBS[e3_${m}_$g]=$(submit "e3-$m-$g" "$PY scripts/train.py model=$m data=avocado +experiment=logo splits.held_out=$g"); done
+    for m in direct_reg gru_d latent_sde fpt_filter; do JOBS[e3_${m}_$g]=$(submit "e3-$m-$g" "$PY scripts/train.py model=$m data=avocado +experiment=logo splits.held_out=$g"); done
     for c in group fixed; do JOBS[e3_clock_${c}_$g]=$(submit "e3-clock-$c-$g" "$PY scripts/train.py model=latent_sde data=avocado +experiment=logo splits.held_out=$g model.clock=$c run_name=latent_sde_avocado_logo_${g}_clock_$c"); done
   done
 }
@@ -96,14 +98,14 @@ stage_e4() {
 }
 
 stage_e5() {
-  for d in pbc2 cmapss; do for m in direct_reg discrete_surv gru_d ode_rnn latent_ode latent_sde; do
+  for d in pbc2 cmapss; do for m in direct_reg discrete_surv gru_d ode_rnn latent_ode latent_sde fpt_filter; do
     JOBS[e5_${m}_$d]=$(submit "e5-$m-$d" "$PY scripts/train.py model=$m data=$d horizon=\$( [[ $d == pbc2 ]] && echo 180 || echo 40 ) model.use_stages=false")
   done; done
 }
 
 stage_e6() {
   [[ -f data/manifests/a2sl_avocado_visits.csv ]] || { echo "e6 skipped: no A2SL manifests"; return; }
-  for m in gru_d latent_sde; do JOBS[e6_$m]=$(submit "e6-$m" "$PY scripts/train.py model=$m data=a2sl horizon=20 train.batch_size=8"); done
+  for m in gru_d latent_sde fpt_filter; do JOBS[e6_$m]=$(submit "e6-$m" "$PY scripts/train.py model=$m data=a2sl horizon=20 train.batch_size=8"); done
   JOBS[e6_gen]=$(submit e6-generative "$PY scripts/train.py model=latent_sde data=a2sl horizon=20 train.batch_size=8 model.decode_features=true run_name=latent_sde_a2sl_generative")
 }
 

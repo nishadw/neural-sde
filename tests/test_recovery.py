@@ -112,3 +112,49 @@ def test_arrhenius_clock_recovers_activation_energy():
     model, _ = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
     ea_hat = float(model.clock.ea)
     assert abs(ea_hat - ea) / ea < 0.15, ea_hat  # E_a depends on the rate ratio only, which is identified
+
+
+@pytest.mark.slow
+def test_exact_filter_recovers_rates_sigma_and_fpt():
+    """The grid filter has no variational gap: with the thresholds fixed it recovers the absolute rates, sigma,
+    and the fresh-fruit spoilage CDF."""
+    from ripen.models import FirstPassageFilter
+
+    scfg = SyntheticConfig(n_items=180, t_max=24.0, sigma=0.25, seed=11)
+    items = simulate(scfg)
+    sp = make_splits(items, seed=0)
+    tr, va, te = select(items, sp["train"]), select(items, sp["val"]), select(items, sp["test"])
+    info = dataset_info(items)
+    model = FirstPassageFilter(
+        info.feat_dim,
+        len(info.groups),
+        horizon=24,
+        key=jax.random.PRNGKey(0),
+        use_images=False,
+        use_stages=True,
+        drift_kind="linear",
+        sigma_kind="const",
+        clock="group",
+        clock_kwargs={"init_rate": 0.4},
+        fixed_thresholds=True,
+        link_scale=0.1,
+        learn_link_scale=False,
+        init_sigma=0.4,
+        z0_mean=1.5,
+        z0_std=0.5,
+    )
+    tcfg = TrainConfig(epochs=12, batch_size=32, lr=3e-2, patience=12, n_obs_mode="random", seed=0)
+    model, hist = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
+    assert hist[-1]["train_loss"] < hist[0]["train_loss"]
+    rates = {g: float(r) for g, r in zip(info.groups, np.asarray(model.clock.rates()), strict=True)}
+    for g, true in scfg.rates.items():
+        assert abs(rates[g] - true) / true < 0.2, (g, rates[g], true)
+    sigma = float(np.asarray(model.sigma_r(jnp.zeros(()))))
+    assert abs(sigma - scfg.sigma) / scfg.sigma < 0.4, sigma
+    fresh = [it.prefix(1) for it in te if it.storage == "T20"]
+    F = np.asarray(model.predict_cdf(collate(fresh, info, n_obs=1), jax.random.PRNGKey(3))).mean(0)
+    t = np.arange(F.shape[0], dtype=float)
+    truth = np.mean(
+        [analytic_spoilage_cdf(t, it.meta["z0"], 0.473, scfg.calendar_sigma(0.473)) for it in fresh], axis=0
+    )
+    assert np.max(np.abs(F - truth)) < 0.15, np.max(np.abs(F - truth))

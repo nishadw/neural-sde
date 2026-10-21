@@ -41,8 +41,8 @@ baselines:          ## per-photo baselines on $(DATA)
 sequence:           ## GRU / GRU-D / ODE-RNN on $(DATA)
 	for m in gru_gap gru_d ode_rnn; do $(PY) scripts/train.py model=$$m data=$(DATA); done
 
-sde:                ## latent ODE and latent SDE on $(DATA)
-	for m in latent_ode latent_sde; do $(PY) scripts/train.py model=$$m data=$(DATA); done
+sde:                ## latent ODE, latent SDE and the exact filter on $(DATA)
+	for m in latent_ode latent_sde fpt_filter; do $(PY) scripts/train.py model=$$m data=$(DATA); done
 
 all-models: baselines sequence sde   ## everything above
 

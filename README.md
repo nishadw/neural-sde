@@ -12,10 +12,11 @@ An avocado is photographed daily until it spoils. A patient's labs are drawn at 
 declares itself. An engine is inspected until it fails. In each case the event is seen only *between* two
 visits (interval-censored) or not at all (right-censored), and the speed of decline depends on a condition —
 storage temperature, dose, load — that we would like to extrapolate. `ripen` models the hidden state as a
-**latent neural SDE whose clock is a physical function of the condition** (Arrhenius for temperature), defines
+**neural diffusion whose clock is a physical function of the condition** (Arrhenius for temperature), defines
 the event as the **first passage** of a learned progression coordinate across a boundary, and derives the
-event-time distribution **exactly** from the learned dynamics by solving the backward Kolmogorov equation once
-per batch — no path simulation, no smoothed indicator. The resulting interval-censored likelihood is a proper
+event-time distribution **exactly** from the learned dynamics by solving the Kolmogorov equations on a grid —
+the forward one to filter the state between visits, the backward one to forecast — with no path simulation
+and no smoothed indicator. A latent-SDE ELBO variant handles multi-dimensional appearance latents. The resulting interval-censored likelihood is a proper
 score, the clock is identifiable, and forecasting from any visit is a table look-up.
 
 Seven other model families — the published classify-then-regress baseline, a direct regressor, discrete-time
@@ -65,26 +66,29 @@ MAE is on uncensored instances; CRPS equals MAE for point predictions.
 | `discrete_surv` | 1 photo + T | interval | TBD | TBD | TBD | TBD | TBD | TBD |
 | `gru_gap` / `gru_d` / `ode_rnn` | photos so far + T | interval | TBD | TBD | TBD | TBD | TBD | TBD |
 | `latent_ode` | photos so far + T | first passage | TBD | TBD | TBD | TBD | TBD | TBD |
-| **`latent_sde`** (PDE likelihood) | photos so far + κ(T) | first passage, exact | TBD | TBD | TBD | TBD | TBD | TBD |
+| **`fpt_filter`** (exact grid filter) | photos so far + κ(T) | first passage, exact marginal likelihood | TBD | TBD | TBD | TBD | TBD | TBD |
+| `latent_sde` (PDE-ELBO) | photos so far + κ(T) | first passage, exact given the posterior path | TBD | TBD | TBD | TBD | TBD | TBD |
 | `latent_sde` (Monte Carlo likelihood) | photos so far + κ(T) | first passage, smoothed | TBD | TBD | TBD | TBD | TBD | TBD |
 
 Second domains (PBC2 clinical, C-MAPSS degradation), the unseen-temperature transfer, the sparser-visit and
 photo-count ablations and the multimodal A2SL runs land in [`results/summary.md`](results/summary.md).
 
-**What runs today, on CPU, in CI:** the fake-fruit tests. A label-only latent SDE with a linear drift,
-constant diffusion and a per-group clock is fit to ripening simulated from a known SDE at the published rates
-(0.228 / 0.473 / 0.518 stages per day) and must recover the rate ratios within 15 % (the absolute scale is
-confounded with the latent origin — `docs/theory.md` P3), the noise within 50 % and the inverse-Gaussian
-spoilage CDF within 0.15; with two temperatures the Arrhenius clock must recover `E_a = 50 kJ/mol` within 15 % ([`tests/test_recovery.py`](tests/test_recovery.py)). The PDE solver matches the
+**What runs today, on CPU, in CI:** the fake-fruit tests. Ripening is simulated from a known SDE at the
+published rates (0.228 / 0.473 / 0.518 stages per day). The **exact grid filter** must recover the absolute
+rates within 20 %, the noise within 40 % and the inverse-Gaussian spoilage CDF within 0.15; the latent-SDE ELBO
+must recover the rate ratios within 15 % (its amortised posterior leaves a gap on the common factor —
+`docs/theory.md` P3/P5) and with two temperatures the Arrhenius `E_a = 50 kJ/mol` within 15 % ([`tests/test_recovery.py`](tests/test_recovery.py)). The PDE solver matches the
 inverse-Gaussian law to 0.001 ([`tests/test_fpt_pde.py`](tests/test_fpt_pde.py)).
 
-## The model in four lines
+## The model in five lines
 
 ```
-prior      dR = κ(x) μ(R) dt + √κ(x) σ(R) dW        (progression R; appearance U rides along)
-posterior  drift += g_φ(Z, context, t) for t ≤ t_now   (latent-SDE ELBO, Li et al. 2020)
-observed   stage_k ~ Ordinal(R(t_k)),  features_k ~ N(dec(Z(t_k)), s²)   [optional]
-event      τ = inf{t : R(t) ≥ b};  S(s | r) solves ∂_s S = μ ∂_r S + ½σ² ∂_rr S,  P(τ − t > h) = S(κh | R_t)
+dynamics   dR = κ(x) μ(R) dt + √κ(x) σ(R) dW        (progression R; physiological time s = κt)
+observed   stage_k ~ Ordinal(R(t_k));  photo_k → soft stage q(x_k) → emission Σ_k q_k P(stage=k | R)
+event      τ = inf{t : R(t) ≥ b}
+inference  exact: density of R on a grid, p ← exp(κΔ Lᵀ) p between visits, p ← p·e_k at visits  (fpt_filter)
+           or latent-SDE ELBO with posterior drift g_φ(Z, context, t) for appearance latents U      (latent_sde)
+forecast   P(τ − t > h | history) = Σ_i p_i S(κh | r_i),  S from ∂_s S = μ ∂_r S + ½σ² ∂_rr S
 ```
 
 The clock multiplies the generator, so in physiological time `s = κt` every item follows the same SDE and one

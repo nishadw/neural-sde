@@ -87,7 +87,10 @@ photos / scans / labs ──► frozen encoder ──► visit features ──�
 Likelihood of what we observe: stages at visits (ordinal), features at visits (Gaussian, optional), and the
 censoring observation — for an event in `(t_m, t_{m+1}]`, the bridge no-crossing factors between observed
 latents times `[1 − S(κ Δ_m | r_m)]` for the last, unobserved-end interval (exact by the Markov property;
-`docs/theory.md` P1). Minus the Girsanov KL. That is the whole loss.
+`docs/theory.md` P1). Minus the Girsanov KL. That is the latent-SDE loss. The **exact filter** (`fpt_filter`,
+`theory.md` P5) needs none of the posterior machinery: it carries the density of `R` on a grid, pushes it
+forward between visits with the Fokker–Planck operator, multiplies by what each visit says, and the product of
+the normalisers *is* the likelihood — a continuous-state HMM with a learned diffusion kernel.
 
 ## 6. Why this is new (short)
 

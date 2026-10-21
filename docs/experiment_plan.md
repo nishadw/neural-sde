@@ -7,7 +7,7 @@ Claims (see `docs/research_plan.md`, `docs/theory.md`):
 
 | # | Claim | Experiment |
 |---|---|---|
-| P1 | Exact interval-censored first-passage likelihood (PDE) vs the smoothed Monte Carlo estimator | E2 |
+| P1/P5 | Exact first-passage likelihoods (grid filter; PDE-ELBO) vs the smoothed Monte Carlo estimator | E2 |
 | P2 | The censored log score is the proper metric; CRPS/MAE reported for comparability | all (metric `nll`) |
 | P3 | The Arrhenius clock is identifiable and transfers to an unseen storage temperature | E3 |
 | E1 | Beats the two published point-estimate models on the avocado data while keeping censored fruit | E1 |
@@ -41,7 +41,8 @@ make test                                # includes tests/test_recovery.py (rate
 make synthetic-quick                     # results/synthetic/recovery.{json,png}
 ```
 
-Pass criteria are in the tests: rates within 25 %, sigma within 50 %, max |CDF error| < 0.15, `E_a` within 15 %.
+Pass criteria are in the tests: exact filter — absolute rates within 20 %, sigma within 40 %, max |CDF error| < 0.15;
+latent-SDE ELBO — rate ratios within 15 %, sigma within 50 %, `E_a` within 15 % (see `docs/theory.md` P3/P5).
 
 ## 2. On UMIACS
 
@@ -57,8 +58,8 @@ What each stage runs:
 | Stage | Jobs | Output |
 |---|---|---|
 | `synthetic` | `scripts/synthetic_recovery.py` at full scale | `results/synthetic/recovery.{json,png}` |
-| `e1` | all 8 models on `data=avocado`; latent SDE labels-only variant | `results/runs/<model>_avocado/` with `metrics_{test,val}.json`, `metrics_by_n_obs.json`, reliability and pred-vs-true figures |
-| `e2` | latent SDE with `model.event_likelihood=pde` vs `mc`, on avocado and synthetic | `results/runs/latent_sde_{avocado,synthetic}_{pde,mc}/` |
+| `e1` | all 9 models on `data=avocado`; latent SDE labels-only variant | `results/runs/<model>_avocado/` with `metrics_{test,val}.json`, `metrics_by_n_obs.json`, reliability and pred-vs-true figures |
+| `e2` | `fpt_filter` (exact) vs latent SDE with `model.event_likelihood=pde` vs `mc`, on avocado and synthetic | `results/runs/{fpt_filter,latent_sde}_{avocado,synthetic}_*/` |
 | `e3` | leave one storage group out × {direct_reg, gru_d, latent_sde}; latent SDE with `clock=group` and `clock=fixed` | `results/runs/*_logo_*` |
 | `e4` | every-2/every-3-day training for gru_d / latent_ode / latent_sde; daily-trained models evaluated on sparser test visits | `results/runs/*_every{2,3}`, `metrics_test_every{2,3}.json` |
 | `e5` | six models on `data=pbc2` (horizon 180 months) and `data=cmapss` (horizon 40 inspections) | `results/runs/<model>_{pbc2,cmapss}/` |

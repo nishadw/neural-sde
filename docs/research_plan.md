@@ -74,6 +74,13 @@ without the progression structure.
 **Forecasting** from the latest visit is simulation-free: sample `r` from the posterior at `t_now`, read
 `S̃(κh | r)` for `h` on the day grid, average.
 
+**Two estimators of the same model (added 2026-10-20).** The latent-SDE ELBO above (`latent_sde`) and an
+**exact grid filter** (`fpt_filter`, `docs/theory.md` P5) that propagates the density of `R` on a grid with the
+forward Kolmogorov operator between visits and multiplies by stage / photo emissions — a continuous-state
+HMM with a learned diffusion kernel. The filter has no variational gap and recovers absolute rates where the
+ELBO recovers only ratios; it is the primary estimator for the paper, the ELBO the general multi-dimensional
+one, and the Monte Carlo running-max the ablation.
+
 ## 4. Claims and what proves them
 
 | # | Claim | Evidence |
@@ -82,8 +89,9 @@ without the progression structure.
 | P2 | *Properness.* Under independent monitoring (visit times ⊥ event given covariates) the interval-censored log-likelihood is a strictly proper scoring rule for the event distribution; Survival-CRPS is not (Rindt et al. 2022). | Follows Yanagisawa & Akiyama (ICML 2026); we state it for our likelihood and use it as both loss and metric |
 | P3 | *Identifiability of the clock.* The rate *ratios* `κ(x)/κ(x')` — hence the Arrhenius `E_a` — and the forecast CDF are identified from the stage trajectories; the common factor is confounded with the latent origin and is pinned by the `z₀` prior. | Scale argument on `(μ_R, σ_R, κ, θ, z₀)`; `tests/test_recovery.py` (ratios within 15 %, `E_a` within 15 %, CDF within 0.15) |
 | P4 | *Numerics.* The finite-difference scheme converges to `S̃` as the grid is refined, and for constant drift it matches the inverse-Gaussian law. | `tests/test_fpt_pde.py` |
+| P5 | *Exact inference.* The grid filter computes the marginal likelihood of stages, photo emissions and the censoring observation without a variational posterior; absolute rates, `σ` and the forecast CDF are recovered. | `tests/test_recovery.py::test_exact_filter_*`, brute-force comparison in `docs/theory.md` P5 |
 | E1 | Beats the two published point-estimate models on the avocado data on MAE-PO and gives calibrated intervals; keeps the censored fruit they dropped. | Mendeley avocado, all 8 model families, one protocol |
-| E2 | The exact PDE likelihood trains better than the smoothed Monte Carlo estimator (lower loss, lower gradient variance, faster). | Synthetic + avocado ablation |
+| E2 | Exact filter vs PDE-ELBO vs smoothed Monte Carlo: parameter recovery, proper score, calibration, wall-clock. | Synthetic + avocado ablation (`run_umiacs.sh e2`) |
 | E3 | Transfer to an unseen temperature via the Arrhenius clock beats a per-group clock and the no-clock baselines on the held-out group. | Leave-one-storage-group-out |
 | E4 | Calibration and sharpness degrade gracefully with sparser visits (every 2–3 days); photo count tightens intervals. | Subsampling and prefix ablations |
 | E5 | Same model, other domain: PBC2 (longitudinal clinical) and/or C-MAPSS (degradation to failure, artificially inspected every k cycles). | Second-domain runs |
@@ -122,4 +130,5 @@ without the progression structure.
 5. ✔ `run_umiacs.sh`.
 6. ✔ `docs/theory.md` (P1–P4), `docs/background.md`.
 7. ⟳ Verifier passes (first pass running 2026-10-20); fix list to follow.
-8. ☐ MAE-PO; CiPOT/CSD-style post-hoc calibration comparator; gradient-method sweep on the real data.
+8. ✔ Exact grid filter (`fpt_filter`) — removes the variational gap; strict recovery test passes.
+9. ☐ MAE-PO; CiPOT/CSD-style post-hoc calibration comparator; gradient-method sweep on the real data; second verifier pass on P5.
