@@ -132,13 +132,22 @@ live density `p` and the survival table of P4.
 **Why it matters.** The latent-SDE ELBO identified only the rate ratios (P3): the amortised posterior left a
 gap on the common factor. The filter has no such gap: on the same synthetic data it recovers the absolute
 rates within 20 %, `σ` within 40 % and the fresh-fruit CDF within 0.15 (`tests/test_recovery.py::
-test_exact_filter_recovers_rates_sigma_and_fpt`), with the start prior `z₀ ~ N(m, s²)` learnable. Validated
-against brute-force path simulation on one item (filter 5.9 nats vs 4.8 ± MC/discretisation) and by a
-likelihood profile that is minimised at the true `(κ, σ)`.
+test_exact_filter_recovers_rates_sigma_and_fpt`), with the start prior `z₀ ~ N(m, s²)` learnable. Validated by
+an independent verifier against closed-form (image-method) likelihoods and particle-filter Monte Carlo on
+hand-built cases and simulated items: agreement within 0.004–0.07 nats at `ds = 0.02` (`docs/verifier_report.md`
+§P5); the likelihood profile is minimised at the true `(κ, σ)`; recovered rates 0.235 / 0.475 / 0.523 vs
+0.228 / 0.473 / 0.518.
 
 **Cost.** One `N × N` propagator per batch plus `log₂(K)` matrix–vector products per visit interval (binary
 decomposition of the step count, with linear interpolation to the fractional step so the likelihood is
-differentiable in the clock). `N = 160`, `ds = 0.02`.
+differentiable in the clock). `N = 160`, `ds = 0.02`, `K = 2¹³` steps (164 physiological units; beyond that the
+propagation is clipped and its gradient vanishes — keep `κ_max · longest gap / ds` below it).
+
+**Assumption behind the photo emission.** Multiplying the label emission and the photo emission assumes the
+label and the photo are conditionally independent given the latent; when raters labelled the same photo that
+fails and the photo term double-counts — `image_emission: unlabelled_only` uses the photo only where no label
+exists. An emission floor (`emission_floor`, default 1e-4) absorbs label noise and keeps the density from
+collapsing to zero.
 
 **Where the latent SDE still matters.** Appearance dimensions `U` and the Gaussian feature decoder are
 multi-dimensional; the ELBO (`LatentDynamics`) remains the estimator for that generative model and for
@@ -155,5 +164,5 @@ unstructured latents, and the Monte Carlo running-max is the ablation baseline.
 5. ~~Verifier pass on P1 / KL~~ — done 2026-10-20 (`docs/verifier_report.md`): clock scaling, ELBO assembly,
    leakage and metrics confirmed; P1 corrected to bridge factors; origin confound added to P3.
 6. ~~Variational gap on the common rate factor~~ — closed by the exact grid filter (P5, `ripen.models.fpt_filter`).
-7. A verifier pass on P5: the forward operator (transpose of `L`, mass conservation), the emission semantics
-   for unlabelled and censored visits, and the brute-force comparison at tighter `ds`.
+7. ~~Verifier pass on P5~~ — done 2026-10-20 (`docs/verifier_report.md` §P5): operator, gradients, emissions,
+   forecasts and brute-force agreement confirmed; the first-visit-spoiled case and the step ceiling were fixed.

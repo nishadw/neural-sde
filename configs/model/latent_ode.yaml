@@ -13,7 +13,7 @@ event_likelihood: pde
 drift_kind: mlp
 monotone_drift: true
 clock: arrhenius
-clock_kwargs: {ea_j_mol: 50000.0, rate_ref: 0.473, t_ref_c: 20.0}
+clock_kwargs: {ea_j_mol: 50000.0, rate_ref: auto, t_ref_c: 20.0}   # auto: 3.5 stage units per median event time
 fixed_thresholds: false
 n_sub: 2
 method: checkpoint          # backprop | checkpoint | adjoint

@@ -59,6 +59,18 @@ def predict_all(
         nobs.append(np.asarray(batch.n_obs))
         tnow.append(np.asarray(batch.t_now))
         snow.append(np.asarray(batch.stage_now))
+    if not Fs:  # no unspoiled prefix in these items (e.g. single-visit items already spoiled)
+        empty = np.zeros((0,))
+        return PredictionSet(
+            np.zeros((0, model.horizon + 1)),
+            empty,
+            empty,
+            empty.astype(int),
+            np.asarray([]),
+            empty.astype(int),
+            empty,
+            empty.astype(int),
+        )
     return PredictionSet(
         np.concatenate(Fs),
         np.concatenate(lo),

@@ -14,7 +14,7 @@ drift_kind: mlp            # mlp | linear (unit speed; the clock carries the rat
 monotone_drift: true       # mu_R > 0: ripening does not reverse
 sigma_kind: mlp            # mlp | const
 clock: arrhenius           # arrhenius | group | fixed
-clock_kwargs: {ea_j_mol: 50000.0, rate_ref: 0.473, t_ref_c: 20.0}
+clock_kwargs: {ea_j_mol: 50000.0, rate_ref: auto, t_ref_c: 20.0}   # auto: 3.5 stage units per median event time
 fixed_thresholds: false
 n_sub: 2                   # solver steps per day
 method: checkpoint         # backprop | checkpoint | adjoint   (gradient through the SDE solve)

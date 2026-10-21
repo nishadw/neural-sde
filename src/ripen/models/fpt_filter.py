@@ -45,6 +45,9 @@ def forward_propagator_powers(L: Array, ds: float, n_pow: int) -> Array:
     n = L.shape[0]
     lt = L.T
     eye = jnp.eye(n)
+    # Crank-Nicolson is formally non-monotone for sigma^2 ds / h^2 > 2 (sigma >= 0.4 at N=160, ds=0.02), but on the
+    # densities that occur (initial Gaussian, hard emissions) no node went negative in the verifier's sweeps; the clip
+    # in `propagate` is a safeguard, not a correction.
     p1 = jnp.linalg.solve(eye - 0.5 * ds * lt, eye + 0.5 * ds * lt)
 
     def square(p, _):
@@ -106,6 +109,8 @@ class FirstPassageFilter(eqx.Module):
     n_pow: int = eqx.field(static=True)
     pde_ds: float = eqx.field(static=True)
     pde_steps: int = eqx.field(static=True)
+    emission_floor: float = eqx.field(static=True)
+    image_emission: str = eqx.field(static=True)
 
     def __init__(
         self,
@@ -135,11 +140,13 @@ class FirstPassageFilter(eqx.Module):
         n_grid: int = 160,
         r_min: float = -1.0,
         ds: float = 0.02,
-        n_pow: int = 11,
+        n_pow: int = 13,
         pde_ds: float = 0.02,
         pde_steps: int = 2500,
         emission_width: int = 64,
         visit_dim: int = 32,
+        emission_floor: float = 1e-4,
+        image_emission: str = "always",
     ):
         if not (use_images or use_stages):
             raise ValueError("need images or stages")
@@ -155,6 +162,10 @@ class FirstPassageFilter(eqx.Module):
         self.use_images, self.use_stages = use_images, use_stages
         self.n_grid, self.r_min, self.ds, self.n_pow = n_grid, r_min, ds, n_pow
         self.pde_ds, self.pde_steps = pde_ds, pde_steps
+        self.emission_floor = emission_floor
+        if image_emission not in ("always", "unlabelled_only"):
+            raise ValueError(image_emission)
+        self.image_emission = image_emission
         self.prior_r = None if drift_kind == "linear" else eqx.nn.MLP(1, "scalar", width, 2, activation=tanh, key=ks[0])
         if sigma_kind == "const":
             self.log_sigma_r = jnp.log(jnp.asarray(init_sigma, jnp.float32))
@@ -215,10 +226,16 @@ class FirstPassageFilter(eqx.Module):
             e_lab = e_stage[jnp.clip(stage - 1, 0, N_STAGES - 1)]
             e = jnp.where(stage > 0, e_lab, e)
         if self.use_images:
+            # photo emission: a mixture of the stage likelihoods weighted by the learned soft stage q(x). Multiplying it
+            # with a label emission assumes label and photo are conditionally independent given the latent; with
+            # image_emission="unlabelled_only" the photo is used only where no label exists (labels rated from photos)
             q = jax.nn.softmax(self.emission(self.visit_enc(feat, jnp.asarray(0))))  # [K]
-            e = e * (q @ e_stage)
+            e_img = q @ e_stage
+            use_img = jnp.asarray(True) if self.image_emission == "always" else (stage == 0)
+            e = jnp.where(use_img, e * e_img, e)
         cem = jnp.zeros(n).at[-1].set(1.0)
         live = 1.0 - cem
+        e = e + self.emission_floor  # label / photo noise floor: no visit can zero the whole density on its own
         e = jnp.where(alive, e * live, e)
         e = jnp.where(dead, e * cem, e)
         return e
@@ -226,24 +243,32 @@ class FirstPassageFilter(eqx.Module):
     # ----- one item --------------------------------------------------------------------------------------------
     def _filter(self, r_grid, pows, e_stage, kappa, t, stage, feat, visible, spoil_lo, spoil_hi, right_censored):
         """Returns ``(log-likelihood, filtered live density at the last visible visit)``."""
-        p0 = self.initial_density(r_grid)
+        p0 = self.initial_density(r_grid).astype(pows.dtype)
+        t = t.astype(pows.dtype)
 
         def step(carry, inp):
             p, logz, t_prev = carry
             tk, sk, fk, vis = inp
-            p_prop = propagate_time(pows, p, kappa * jnp.clip(tk - t_prev, 0.0, None) / self.ds)
-            alive = tk <= spoil_lo + 1e-6
             dead = (~right_censored) & (tk >= spoil_hi - 1e-6)
+            alive = (tk <= spoil_lo + 1e-6) & ~dead
+            x = kappa * jnp.clip(tk - t_prev, 0.0, None) / self.ds
+            x = jnp.where(
+                dead & (x < 1.0), 1.0, x
+            )  # a spoiled visit needs at least one step of killing (first-visit case)
+            p_prop = propagate_time(pows, p, x)
             e = self.visit_emission(e_stage, sk, fk, alive, dead)
             p_new = p_prop * e
             z = jnp.sum(p_new)
-            p_new = p_new / jnp.maximum(z, 1e-30)
+            ok = (
+                z > 1e-20
+            )  # total collapse (e.g. all mass killed before an "alive" visit): keep the density, pay the floor
+            p_new = jnp.where(ok, p_new / jnp.where(ok, z, 1.0), p_prop)
             p_out = jnp.where(vis, p_new, p)
-            logz_out = jnp.where(vis, logz + jnp.log(jnp.maximum(z, 1e-30)), logz)
+            logz_out = jnp.where(vis, logz + jnp.log(jnp.where(ok, z, 1e-20)), logz)
             t_out = jnp.where(vis, tk, t_prev)
             return (p_out, logz_out, t_out), None
 
-        (p, logz, t_last), _ = jax.lax.scan(step, (p0, jnp.asarray(0.0), t[0]), (t, stage, feat, visible))
+        (p, logz, t_last), _ = jax.lax.scan(step, (p0, jnp.zeros((), pows.dtype), t[0]), (t, stage, feat, visible))
         # censoring observation beyond the last visible visit: survive to lo, then (cross by hi | right-censored).
         # If the scan already consumed the spoiled visit (its "dead" emission), the event is accounted for.
         p_lo = propagate_time(pows, p, kappa * jnp.clip(spoil_lo - t_last, 0.0, None) / self.ds)
@@ -253,10 +278,10 @@ class FirstPassageFilter(eqx.Module):
         p_hi = propagate_time(pows, p_lo.at[-1].set(0.0), x_hi)
         killed = jnp.sum(p_hi[-1])
         consumed_dead = (~right_censored) & (t_last >= spoil_hi - 1e-6)
-        term = jnp.where(right_censored, jnp.log(jnp.maximum(s_lo, 1e-30)), jnp.log(jnp.maximum(killed, 1e-30)))
+        term = jnp.where(right_censored, jnp.log(jnp.maximum(s_lo, 1e-20)), jnp.log(jnp.maximum(killed, 1e-20)))
         logz = logz + jnp.where(consumed_dead, 0.0, term)
         live = p.at[-1].set(0.0)
-        return logz, live / jnp.maximum(jnp.sum(live), 1e-30)
+        return logz, live / jnp.maximum(jnp.sum(live), 1e-20)
 
     # ----- interface -------------------------------------------------------------------------------------------
     def loss(self, batch: Batch, key: Array) -> Array:

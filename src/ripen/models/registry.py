@@ -75,8 +75,24 @@ MODEL_REGISTRY = {
 }
 
 
+def _resolve_clock(cfg: dict, info: DatasetInfo) -> dict:
+    """``clock_kwargs.rate_ref: auto`` -> the rate that crosses ~3.5 stage units in the median event time, so the
+    clock starts at the data's time scale (months, cycles, days) instead of the avocado default."""
+    ck = dict(cfg.get("clock_kwargs") or {})
+    if ck.get("rate_ref") == "auto":
+        ck["rate_ref"] = float(3.5 / max(info.median_event_time, 1e-6))
+    if ck.get("init_rate") == "auto":
+        ck["init_rate"] = float(3.5 / max(info.median_event_time, 1e-6))
+    out = dict(cfg)
+    if ck:
+        out["clock_kwargs"] = ck
+    return out
+
+
 def build_model(cfg: dict, info: DatasetInfo, key=None):
-    """``cfg`` must have ``name`` and ``horizon``; other keys are model-specific (see the configs/ directory)."""
+    """``cfg`` must have ``name`` and ``horizon``; other keys are model-specific (see the configs/ directory).
+    ``clock_kwargs.rate_ref: auto`` initialises the clock from the data's median event time."""
+    cfg = _resolve_clock(cfg, info)
     name = cfg["name"]
     if name not in MODEL_REGISTRY:
         raise KeyError(f"unknown model {name!r}; choose from {sorted(MODEL_REGISTRY)}")

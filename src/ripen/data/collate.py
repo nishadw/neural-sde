@@ -29,6 +29,7 @@ class DatasetInfo:
     feat_dim: int
     max_visits: int
     t_max: float
+    median_event_time: float = float("nan")  # median spoil_hi over uncensored items (t_max if none)
 
     def group_index(self, storage: str) -> int:
         return self.groups.index(storage)
@@ -43,11 +44,19 @@ class DatasetInfo:
             "feat_dim": self.feat_dim,
             "max_visits": self.max_visits,
             "t_max": self.t_max,
+            "median_event_time": self.median_event_time,
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> DatasetInfo:
-        return cls(tuple(d["groups"]), tuple(d["produce"]), int(d["feat_dim"]), int(d["max_visits"]), float(d["t_max"]))
+        return cls(
+            tuple(d["groups"]),
+            tuple(d["produce"]),
+            int(d["feat_dim"]),
+            int(d["max_visits"]),
+            float(d["t_max"]),
+            float(d.get("median_event_time", d["t_max"])),
+        )
 
 
 def dataset_info(items: list[Item]) -> DatasetInfo:
@@ -59,12 +68,15 @@ def dataset_info(items: list[Item]) -> DatasetInfo:
                 break
         if feat_dim:
             break
+    events = [it.spoil_hi for it in items if not it.right_censored]
+    t_max = max(it.t_last for it in items)
     return DatasetInfo(
         groups=tuple(sorted({it.storage for it in items})),
         produce=tuple(sorted({it.produce for it in items})),
         feat_dim=feat_dim,
         max_visits=max(it.n_visits for it in items),
-        t_max=max(it.t_last for it in items),
+        t_max=t_max,
+        median_event_time=float(np.median(events)) if events else float(t_max),
     )
 
 

@@ -1,10 +1,17 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
+import pytest
 
 from nsde import bs_call, heston_call, implied_vol
 
-jax.config.update("jax_enable_x64", True)
+
+@pytest.fixture(scope="module", autouse=True)
+def _x64():
+    """The pricer round-trips need float64; switch it on for this module only (a session-wide toggle leaks)."""
+    jax.config.update("jax_enable_x64", True)
+    yield
+    jax.config.update("jax_enable_x64", False)
 
 
 def test_put_call_parity_and_bounds():

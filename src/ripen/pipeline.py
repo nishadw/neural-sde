@@ -132,8 +132,22 @@ def evaluate_and_write(model, items, info: DatasetInfo, cfg: DictConfig, out: Pa
     preds = predict_all(
         model, items, info, key, n_obs_list=_n_obs_list(cfg.eval.n_obs_list), batch_size=cfg.eval.batch_size
     )
-    metrics = summarize_by_group(preds.F, preds.lo, preds.hi, preds.group, info.groups, preds.item_ids)
     out.mkdir(parents=True, exist_ok=True)
+    if preds.F.shape[0] == 0:
+        (out / f"metrics_{tag}.json").write_text(json.dumps({"overall": {"n": 0}}, indent=2))
+        return {
+            "overall": {
+                "n": 0,
+                "mae": float("nan"),
+                "crps": float("nan"),
+                "coverage80": float("nan"),
+                "width80": float("nan"),
+                "cindex": float("nan"),
+                "ece": float("nan"),
+                "n_uncensored": 0,
+            }
+        }
+    metrics = summarize_by_group(preds.F, preds.lo, preds.hi, preds.group, info.groups, preds.item_ids)
     (out / f"metrics_{tag}.json").write_text(json.dumps(metrics, indent=2))
     reliability_diagram(preds.F, preds.lo, preds.hi, out / f"reliability_{tag}.png", title=f"{cfg.model.name} / {tag}")
     predicted_vs_true(preds.F, preds.hi, out / f"pred_vs_true_{tag}.png", title=f"{cfg.model.name} / {tag}")

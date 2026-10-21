@@ -58,3 +58,37 @@ sparser-visit ablation. ✔ known-set changed to `(lo ≥ h) | (hi ≤ h)`. ✔ 
 
 - ~~An exact grid-filtering likelihood~~ — implemented the same day as `ripen.models.fpt_filter` (`theory.md`
   P5); it recovers the absolute rates within 20 % where the ELBO could not. Needs its own verifier pass.
+
+
+---
+
+# Verifier report — the exact grid filter (P5), 2026-10-20
+
+*Second independent pass, on `src/ripen/models/fpt_filter.py`. Abridged; numbers are the agent's.*
+
+1. **Forward operator — OK.** `L·1 = 0` exactly; `P = (I−½ds Lᵀ)⁻¹(I+½ds Lᵀ)` conserves mass (column sums off
+   by ≤ 1.6e-5 at 160/0.02 after 11 squarings). Killed mass vs the backward table: 2.7e-3 (ds 0.02), 6.7e-4
+   (0.01); vs the inverse-Gaussian truth: 8.9e-3 (160/0.02), 2.2e-3 (320/0.01) — grid error dominates.
+   Transport exact to 4 d.p. (mean `μs + r₀`, variance `σ²s + var₀`). CN is formally non-monotone for
+   `σ ≥ 0.4` at 160/0.02 but no node went negative on the densities that occur. ✔ comment added.
+2. **Clock gradient — OK.** `propagate_time` continuous across integer steps (jump ≤ 8e-7); `jax.grad` of the
+   loss w.r.t. the group log-rates matches central differences to 0.5 %. Caveat: steps clipped at `2^n_pow − 1`
+   → zero gradient on gaps longer than 41 units at `n_pow = 11`. ✔ `n_pow` raised to 13 (164 units).
+3. **Emission semantics — OK except (f).** Nine hand cases vs closed form and particle-filter MC agree within
+   0.004–0.03 nats (unlabelled alive visit, spoiled visit visible or hidden, right-censored, prefix before `lo`).
+   (f) **CONFIRMED-BUG** first visit already spoiled: `alive` and `dead` both true → emission ≡ 0 →
+   `log 1e-30`. ✔ fixed: `alive = … & ~dead`, and a dead visit always gets one propagation step of killing;
+   `tests/test_fpt_filter.py::test_zero_width_interval_and_first_visit_spoiled`.
+4. **`predict_cdf` — OK.** No leakage (0.0 change when the interval is altered), monotone, fresh-item forecast
+   within 0.002–0.006 of the z₀-mixture of inverse-Gaussian CDFs.
+5. **Photo emission.** Mixture `q(x) @ e_stage` verified; multiplying with a label emission assumes label ⊥
+   photo | latent. ✔ documented; `image_emission: unlabelled_only` option added. The mixture is not a normalised
+   likelihood in `x` (fine for end-to-end training); the hybrid-HMM prior division is absorbed by training.
+6. **Recovery test** passed in 13 s: rates 0.2345 / 0.4745 / 0.5226 (true 0.228 / 0.473 / 0.518), σ 0.193
+   (true 0.25), z₀ 1.19 ± 0.155 (true 1.2 ± 0.15), fresh-CDF error 0.028. Brute-force gap at `ds = 0.02` is
+   0.00–0.07 nats (the earlier "1 nat" figure came from an item with the tail bug).
+
+Also found while running the real data end to end (not by the verifier): with monthly units (PBC2) the default
+clock was ~20× too fast, the density was entirely absorbed before an "alive" visit, and the backward pass
+produced NaN gradients. ✔ emission floor + collapse guard in the filter; ✔ `clock_kwargs.rate_ref: auto`
+initialises the clock from the median event time (`DatasetInfo.median_event_time`).
