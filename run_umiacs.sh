@@ -81,11 +81,12 @@ stage_data() {
   [[ -f data/pbc2/pbc2_cleaned.csv ]] || curl -fsSL --retry 3 --max-time 600 -o data/pbc2/pbc2_cleaned.csv --create-dirs https://raw.githubusercontent.com/chl8856/Dynamic-DeepHit/master/data/pbc2_cleaned.csv
   if [[ ! -f data/cmapss/train_FD001.txt ]]; then mkdir -p data/cmapss && curl -fsSL --retry 3 --max-time 1800 -o data/cmapss/CMAPSSData.zip https://data.nasa.gov/docs/legacy/CMAPSSData.zip && (cd data/cmapss && unzip -qo CMAPSSData.zip); fi
   [[ -d data/a2sl ]] && "$PY" scripts/ingest_a2sl.py --no-convert || echo "note: data/a2sl not present; e6 will be skipped"
+  # the loaders read the feature caches, so extract them before the splits
+  [[ -f data/features/avocado_resnet18.npz ]] || "$PY" scripts/extract_features.py --data avocado --root data/avocado --out data/features/avocado_resnet18.npz --device "$( [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && echo cuda || echo cpu )"
+  if [[ -d data/a2sl && ! -f data/features/a2sl_resnet18.npz ]]; then "$PY" scripts/extract_features.py --data a2sl --out data/features/a2sl_resnet18.npz --device cpu; fi
   "$PY" scripts/make_splits.py data=avocado
   for g in T10 T20 Tamb; do "$PY" scripts/make_splits.py data=avocado splits.mode=logo splits.held_out=$g; done
   "$PY" scripts/make_splits.py data=pbc2; "$PY" scripts/make_splits.py data=cmapss
-  [[ -f data/features/avocado_resnet18.npz ]] || "$PY" scripts/extract_features.py --data avocado --root data/avocado --out data/features/avocado_resnet18.npz --device "$( [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && echo cuda || echo cpu )"
-  if [[ -d data/a2sl && ! -f data/features/a2sl_resnet18.npz ]]; then "$PY" scripts/extract_features.py --data a2sl --out data/features/a2sl_resnet18.npz --device cpu; fi
 }
 
 stage_synthetic() { JOBS[synthetic]=$(submit synthetic "$PY scripts/synthetic_recovery.py"); }
