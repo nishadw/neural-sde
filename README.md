@@ -107,11 +107,12 @@ pip install -e ".[dev]"            # add ,features for the torchvision backbone
 make test                          # ~4 min on CPU, includes the fake-fruit recovery tests
 make smoke                         # every model: build, loss, gradient, predict on one batch
 make synthetic-quick               # results/synthetic/recovery.png
-bash run_umiacs.sh setup && bash run_umiacs.sh data && bash run_umiacs.sh all    # the whole paper, on SLURM
+bash run_umiacs.sh pipeline         # the whole paper on SLURM: setup -> data -> experiments -> summary
 ```
 
-`run_umiacs.sh` needs `RIPEN_ACCOUNT / RIPEN_PARTITION / RIPEN_QOS` once; `--local` runs the same sequence
-without SLURM. Every experiment is also one Hydra command
+`run_umiacs.sh` needs `RIPEN_ACCOUNT / RIPEN_PARTITION / RIPEN_QOS` once (on UMIACS class accounts they default
+to `class / class / default`; per-machine paths go in a gitignored `.ripen.env`); `--local` runs the same
+sequence without SLURM. Every experiment is also one Hydra command
 (`python scripts/train.py model=latent_sde data=avocado +experiment=logo splits.held_out=T10`). Splits are by
 item, never by photo, and the split files are committed.
 

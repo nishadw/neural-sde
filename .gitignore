@@ -26,3 +26,6 @@ outputs/
 multirun/
 *.eqx
 *.npz
+
+# per-machine settings for run_umiacs.sh
+.ripen.env

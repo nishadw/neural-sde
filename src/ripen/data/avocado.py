@@ -4,10 +4,13 @@ Expected layout under ``root``::
 
     root/
       <labels>.xlsx        one row per photo: filename, sample, storage group, stage (1-5), day, side (a/b)
-      <images>/...         the 800x800 JPEGs named as in the spreadsheet
+      images/...           the 800x800 JPEGs named as in the spreadsheet (``root`` itself if no ``images/``)
 
-Column names are matched by keyword (see ``COLUMN_KEYS``) because the
-spreadsheet's exact headers are not documented. Two sides are photographed
+Column names are matched by keyword (see ``COLUMN_KEYS``) so other exports still load. The released
+spreadsheet (sheet ``DATABASE``) has ``File Name, Time Stamp, Storage Group, Sample, Day of Experiment,
+Ripening Index Classification``: file names carry no ``.jpg`` and encode the side (``T20_d01_001_a_1``),
+and the ambient group is spelled ``Tam``. 12 of its 14,722 rows have no photo in the release; those
+visits keep their labels and get features only from the photos that exist. Two sides are photographed
 per fruit per day; the stage is a per-sample rating, so a visit's stage is
 the max over its sides when they disagree (recorded in ``meta``).
 """
@@ -60,7 +63,7 @@ def normalise_group(g: str) -> str:
         return "T10"
     if "20" in s:
         return "T20"
-    if "amb" in s.lower():
+    if s.lower().startswith("tam") or "amb" in s.lower():
         return "Tamb"
     raise ValueError(f"unknown storage group {g!r}")
 
@@ -70,14 +73,20 @@ def read_labels(path: str | Path) -> pd.DataFrame:
     path = Path(path)
     df = pd.read_csv(path) if path.suffix.lower() == ".csv" else pd.read_excel(path)
     cols = find_columns(list(df.columns))
+    names = df[cols["filename"]].astype(str).str.strip()
+    names = names.where(names.str.contains(r"\.\w{3,4}$"), names + ".jpg")
+    if "side" in cols:
+        side = df[cols["side"]].astype(str).str.strip()
+    else:  # side from file names like T20_d01_001_a_1
+        side = names.str.extract(r"_([ab])_\d+\.\w+$", expand=False).fillna("a")
     out = pd.DataFrame(
         {
-            "filename": df[cols["filename"]].astype(str).str.strip(),
+            "filename": names,
             "sample": df[cols["sample"]].astype(str).str.strip(),
             "group": df[cols["group"]].map(normalise_group),
             "stage": df[cols["stage"]].astype(int),
             "day": df[cols["day"]],
-            "side": df[cols["side"]].astype(str).str.strip() if "side" in cols else "a",
+            "side": side,
         }
     )
     if np.issubdtype(out["day"].dtype, np.datetime64):
@@ -97,7 +106,7 @@ def load_avocado(
     Args:
         root: dataset directory.
         labels_file: spreadsheet path; default is the first ``*.xlsx`` under ``root``.
-        images_dir: where the JPEGs are; default ``root``. Paths are recorded, not opened.
+        images_dir: where the JPEGs are; default ``root/images`` if it exists, else ``root``. Paths are recorded, not opened.
         features: optional ``{filename: (D,) array}`` from :func:`ripen.data.features.load_feature_cache`.
     """
     root = Path(root)
@@ -106,7 +115,9 @@ def load_avocado(
         if not found:
             raise FileNotFoundError(f"no .xlsx under {root}")
         labels_file = found[0]
-    images_dir = Path(images_dir) if images_dir is not None else root
+    if images_dir is None:
+        images_dir = root / "images" if (root / "images").is_dir() else root
+    images_dir = Path(images_dir)
     df = read_labels(labels_file)
     items: list[Item] = []
     for (sample, group), rows in df.groupby(["sample", "group"], sort=True):

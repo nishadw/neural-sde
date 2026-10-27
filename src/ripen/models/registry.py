@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import jax
 
 from ..data.collate import DatasetInfo
@@ -97,4 +99,6 @@ def build_model(cfg: dict, info: DatasetInfo, key=None):
     if name not in MODEL_REGISTRY:
         raise KeyError(f"unknown model {name!r}; choose from {sorted(MODEL_REGISTRY)}")
     key = key if key is not None else jax.random.PRNGKey(cfg.get("seed", 0))
+    # without image features collate() still pads one all-zero feature column, so size the inputs to match
+    info = dataclasses.replace(info, feat_dim=max(info.feat_dim, 1))
     return MODEL_REGISTRY[name](dict(cfg), info, key)

@@ -37,8 +37,11 @@ def main() -> None:
         items = load_manifest(args.manifest)
     paths = sorted({p for it in items for v in it.visits for p in v.image_paths})
     missing = [p for p in paths if not Path(p).exists()]
-    if missing:
+    if len(missing) > 0.01 * len(paths):  # a handful is expected (the avocado release lacks 12 photos)
         raise FileNotFoundError(f"{len(missing)} image paths do not exist, e.g. {missing[:3]}")
+    if missing:
+        print(f"skipping {len(missing)} missing photos, e.g. {missing[:3]}")
+        paths = sorted(set(paths) - set(missing))
     print(f"{len(items)} items, {len(paths)} photos -> {args.backbone} on {args.device}")
     feats = extract_features(paths, args.backbone, args.batch_size, args.device)
     save_feature_cache(args.out, feats)

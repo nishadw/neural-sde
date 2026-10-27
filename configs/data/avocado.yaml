@@ -3,7 +3,7 @@
 name: avocado
 root: data/avocado
 labels_file: null                                  # default: first *.xlsx under root
-images_dir: null                                   # default: root
+images_dir: null                                   # default: root/images if present, else root
 features_file: data/features/avocado_resnet18.npz  # from scripts/extract_features.py; null = no image features
 subsample_every: 1                                 # 2 or 3 simulates sparser visits (direction 3)
 subsample_offset: 0
