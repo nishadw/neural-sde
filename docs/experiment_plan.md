@@ -1,7 +1,7 @@
 # Experiment plan
 
 Every experiment is one Hydra command; `run_umiacs.sh` strings them together with SLURM dependencies.
-Everything before §2 runs on a laptop CPU. Results cells in the README stay TBD until the run exists.
+Everything before §2 runs on a laptop CPU. Results: `report/REPORT.md` (run 2026-10-28).
 
 Claims (see `docs/research_plan.md`, `docs/theory.md`):
 
@@ -18,7 +18,7 @@ Claims (see `docs/research_plan.md`, `docs/theory.md`):
 ## 0. One-time setup
 
 ```bash
-git clone https://github.com/nishadw/ripen && cd ripen
+git clone https://github.com/nishadw/neural-sde-first-passage && cd neural-sde-first-passage
 bash run_umiacs.sh setup                 # venv at ~/envs/ripen, editable install, CPU tests + smoke
 ```
 

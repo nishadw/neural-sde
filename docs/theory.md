@@ -3,7 +3,7 @@
 *Statements P1–P4 of `docs/research_plan.md`, written out. Notation: visits at `t_0 < … < t_n`, latent
 `Z = (R, U)`, progression `R` with prior `dR = κ μ(R) dt + σ(R) dW`, boundary `b`, event `τ = inf{t : R_t ≥ b}`,
 physiological time `s = κ t`, survival `S̃(s | r) = P(no crossing within physiological time s | R(0) = r)`.
-These are working notes for the write-up, not a finished appendix; a verifier pass is still owed (§5).*
+Working notes for the write-up; verifier pass done 2026-10-20 (`docs/verifier_report.md`).*
 
 ## P1 — Exactness of the Markov-interval likelihood
 

@@ -1,17 +1,14 @@
 # data/
 
-Raw data is never committed. Expected layout:
+Raw data is never committed. Only this file, `manifests/` and the split files are tracked.
 
 ```
 data/
-  avocado/                      'Hass' Avocado Ripening Photographic Dataset (Mendeley 10.17632/3xd9n945v8.1, CC BY 4.0)
-    <labels>.xlsx               one row per photo: filename, sample, storage group, stage 1-5, day, side
-    <images>/*.jpg              800x800 JPEGs
-  features/
-    avocado_resnet18.npz        from `make features` (scripts/extract_features.py)
-  stevens/
-    manifest.csv                see src/ripen/data/stevens.py for the schema (dataset not yet available)
+  avocado/     Mendeley 'Hass' avocado set (10.17632/3xd9n945v8.1, CC BY 4.0): spreadsheet + images/*.jpg
+               (python scripts/download_avocado.py, resumable)
+  a2sl/        A2SL microwave scans + photos (scripts/ingest_a2sl.py; see docs/data_a2sl.md)
+  pbc2/, cmapss/   second domains (docs/data_second_domain.md)
+  features/    frozen-encoder features from scripts/extract_features.py
 ```
 
-Download the avocado set from https://data.mendeley.com/datasets/3xd9n945v8/1 and unzip it here.
-Other candidate datasets and their licenses are listed in `docs/dataset_survey.md`.
+Other candidate datasets: `docs/dataset_survey.md`.

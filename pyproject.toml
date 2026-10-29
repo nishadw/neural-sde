@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ripen"
 version = "0.2.0"
-description = "Distributional shelf-life prediction from produce photos with latent neural SDEs, plus the gradient benchmark and SDE calibration they are built on"
+description = "Latent neural SDEs with exact first-passage likelihoods for censored time-to-event prediction, plus SDE gradient benchmarks and neural local-vol calibration"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

@@ -1,7 +1,7 @@
-# ripen
+# neural-sde-first-passage (package `ripen`)
 
-Distributional shelf-life prediction from produce photos (latent neural SDEs, JAX/equinox/diffrax, Hydra configs).
-Start with README.md, then docs/experiment_plan.md.
+Latent neural SDEs with exact first-passage likelihoods (Kolmogorov PDEs) for censored time-to-event data.
+JAX/equinox/diffrax, Hydra configs. Start with README.md, then report/REPORT.md.
 
 ## Cluster
 On the UMIACS Nexus class cluster (`nexusclass00/01`), load the `umiacs` skill (`.claude/skills/umiacs/SKILL.md`)

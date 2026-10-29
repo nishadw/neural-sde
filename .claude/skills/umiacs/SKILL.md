@@ -26,7 +26,7 @@ Source: https://wiki.umiacs.umd.edu/umiacs/index.php/ClassAccounts
 Check live values with `show_qos`, `show_partition_qos`, `show_nodes -p class` (RTX A4000 / A5000 nodes).
 
 ## Layout on this cluster
-- Repo: `/fs/class-projects/fall2026/cmsc498z/nwajge/ripen` (remote `git@github.com:nishadw/ripen.git`)
+- Repo: `/fs/class-projects/fall2026/cmsc498z/nwajge/ripen` (remote `git@github.com:nishadw/neural-sde-first-passage.git`)
 - `.ripen.env` (gitignored, sourced by `run_umiacs.sh`): `RIPEN_ENV` venv at `.../nwajge/envs/ripen`,
   `RIPEN_PYTHON` = uv-managed Python 3.11 (system python is 3.9, too old), pip/uv/torch caches under `.../nwajge/.cache`.
 - `uv` is at `~/.local/bin/uv` with `UV_PYTHON_INSTALL_DIR=.../nwajge/.local/python`.
