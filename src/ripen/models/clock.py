@@ -63,8 +63,8 @@ class FixedClock(eqx.Module):
 def make_clock(kind: str, n_groups: int, **kw):
     if kind == "arrhenius":
         return ArrheniusClock(**kw)
-    if kind == "group":
-        return GroupClock(n_groups, **kw)
+    if kind == "group":  # clock_kwargs are written for the Arrhenius clock; only init_rate applies here
+        return GroupClock(n_groups, **{k: v for k, v in kw.items() if k == "init_rate"})
     if kind == "fixed":
         return FixedClock()
     raise ValueError(f"unknown clock {kind!r}")

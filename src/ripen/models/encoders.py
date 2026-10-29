@@ -84,7 +84,9 @@ class SequenceEncoder(eqx.Module):
 
     def __call__(self, x: Array, t: Array, visible: Array) -> Array:
         """``x``: ``[V, in_dim]`` per-visit inputs, ``t``: ``[V]``, ``visible``: ``[V]`` bool -> final ``[hidden]``."""
-        dt = jnp.diff(t, prepend=t[:1])
+        # padded visits have t = 0, so their raw gap is -t_last; on long time scales (PBC2, months) the GRU-D decay
+        # exp(+...) overflows there and the masked-out inf still turns the gradient into NaN
+        dt = jnp.where(visible, jnp.diff(t, prepend=t[:1]), 0.0)
 
         def step(h, inp):
             xk, dtk, vis = inp

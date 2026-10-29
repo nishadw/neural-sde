@@ -106,7 +106,8 @@ def load_avocado(
     Args:
         root: dataset directory.
         labels_file: spreadsheet path; default is the first ``*.xlsx`` under ``root``.
-        images_dir: where the JPEGs are; default ``root/images`` if it exists, else ``root``. Paths are recorded, not opened.
+        images_dir: where the JPEGs are; default ``root/images`` if it exists, else ``root``. Paths are recorded,
+            not opened.
         features: optional ``{filename: (D,) array}`` from :func:`ripen.data.features.load_feature_cache`.
     """
     root = Path(root)

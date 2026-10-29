@@ -26,7 +26,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5", "pre-commit", "lifelines"]
-features = ["torch", "torchvision", "pillow"]
+features = ["torch", "torchvision", "pillow", "pillow-heif"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

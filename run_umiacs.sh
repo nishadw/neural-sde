@@ -80,7 +80,7 @@ stage_data() {
   "$PY" -c "from ripen.data.avocado import load_avocado; n = len(load_avocado('data/avocado')); print('avocado items', n); assert n == 478"
   [[ -f data/pbc2/pbc2_cleaned.csv ]] || curl -fsSL --retry 3 --max-time 600 -o data/pbc2/pbc2_cleaned.csv --create-dirs https://raw.githubusercontent.com/chl8856/Dynamic-DeepHit/master/data/pbc2_cleaned.csv
   if [[ ! -f data/cmapss/train_FD001.txt ]]; then mkdir -p data/cmapss && curl -fsSL --retry 3 --max-time 1800 -o data/cmapss/CMAPSSData.zip https://data.nasa.gov/docs/legacy/CMAPSSData.zip && (cd data/cmapss && unzip -qo CMAPSSData.zip); fi
-  [[ -d data/a2sl ]] && "$PY" scripts/ingest_a2sl.py --no-convert || echo "note: data/a2sl not present; e6 will be skipped"
+  [[ -d data/a2sl ]] && "$PY" scripts/ingest_a2sl.py || echo "note: data/a2sl not present; e6 will be skipped"
   # the loaders read the feature caches, so extract them before the splits
   [[ -f data/features/avocado_resnet18.npz ]] || "$PY" scripts/extract_features.py --data avocado --root data/avocado --out data/features/avocado_resnet18.npz --device "$( [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && echo cuda || echo cpu )"
   if [[ -d data/a2sl && ! -f data/features/a2sl_resnet18.npz ]]; then "$PY" scripts/extract_features.py --data a2sl --out data/features/a2sl_resnet18.npz --device cpu; fi
@@ -121,7 +121,7 @@ stage_e4() {
 
 stage_e5() {
   for d in pbc2 cmapss; do for m in direct_reg discrete_surv gru_d ode_rnn latent_ode latent_sde fpt_filter; do
-    JOBS[e5_${m}_$d]=$(submit "e5-$m-$d" "$PY scripts/train.py model=$m data=$d horizon=\$( [[ $d == pbc2 ]] && echo 180 || echo 40 ) model.use_stages=false")
+    JOBS[e5_${m}_$d]=$(submit "e5-$m-$d" "$PY scripts/train.py model=$m data=$d horizon=\$( [[ $d == pbc2 ]] && echo 180 || echo 40 ) ++model.use_stages=false")
   done; done
 }
 

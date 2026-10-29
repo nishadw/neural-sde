@@ -75,8 +75,10 @@ for their firmness notes. Both are outside the "no new data collection" rule for
 
 ```python
 from ripen.data.a2sl import load_a2sl_avocado, load_a2sl_pilot, load_a2sl_watermelon, load_scan_cache
+
 scans = load_scan_cache("data/a2sl/scans_avocado_jun2023.npz")
-items = load_a2sl_avocado(features=photo_feature_cache, scans=scans)   # 15 Items; visit features = [photo | scan summary]
+# 15 Items; visit features = [photo | scan summary]
+items = load_a2sl_avocado(features=photo_feature_cache, scans=scans)
 ```
 
 Scan features are fixed summaries (`ripen.data.a2sl.scan_summary`: log-intensity mean/std/max, centre-to-rim

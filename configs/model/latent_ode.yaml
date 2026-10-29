@@ -9,7 +9,8 @@ encoder: gru
 use_images: true
 use_stages: true
 structured: true
-event_likelihood: pde
+event_likelihood: mc       # not pde: with sigma = 0 the backward equation is pure transport, survival is a step in r
+                           # and the event term gives q(z0) no gradient (PBC2: C-index 0.50 with pde, 0.76 with mc)
 drift_kind: mlp
 monotone_drift: true
 clock: arrhenius

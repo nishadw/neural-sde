@@ -8,6 +8,7 @@ width: 32
 encoder: gru               # gru | gru_d | ode_rnn (the posterior context encoder)
 use_images: true
 use_stages: true
+decode_features: false     # also reconstruct the photo features from Z (generative variant, e6)
 structured: true           # progression-structured prior (scalar R autonomous, U appearance)
 event_likelihood: pde      # pde (exact Markov-interval likelihood, simulation-free forecasts) | mc
 drift_kind: mlp            # mlp | linear (unit speed; the clock carries the rate)
